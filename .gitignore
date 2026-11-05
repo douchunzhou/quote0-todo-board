@@ -1,0 +1,22 @@
+# 依赖 / 构建产物
+.tools/
+QuoteTodo.exe
+*.exe
+*.pdb
+
+# 工具运行产物
+.mnemon/
+.edge/
+.edge2/
+.run/
+.testdata/
+*.log
+
+# 本地临时文件
+.preview*.html
+.seed*.html
+.card.html
+.dlg.html
+.wx.html
+.rot*.html
+*.tmp

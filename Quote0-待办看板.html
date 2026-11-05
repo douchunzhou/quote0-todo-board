@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quote/0 · 待办看板</title>
+<style>
+  :root{
+    --bg:#F5F5F7;
+    --surface:#FFFFFF;
+    --fill:#F2F2F5;
+    --fill-2:#E8E8ED;
+    --text:#1D1D1F;
+    --text-2:#6E6E73;
+    --text-3:#8E8E93;
+    --line:rgba(0,0,0,.07);
+    --blue:#0071E3;
+    --blue-hover:#0077ED;
+    --green:#34C759;
+    --red:#FF3B30;
+    --orange:#FF9500;
+    --r-card:18px;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 12px 32px -20px rgba(0,0,0,.30);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased; letter-spacing:-.01em;
+  }
+  button{font:inherit; color:inherit; cursor:pointer; border:0; background:none}
+  input,select{font:inherit; color:inherit}
+  ::selection{background:rgba(0,113,227,.18)}
+
+  .wrap{max-width:1244px; margin:0 auto; padding:34px 28px 64px}
+
+  /* ---------- 顶栏 ---------- */
+  .top{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px}
+  h1{font-size:28px; line-height:1.15; margin:0 0 5px; font-weight:600; letter-spacing:-.022em}
+  .sub{margin:0; color:var(--text-2); font-size:13px}
+  .top-actions{display:flex; align-items:center; gap:10px; padding-top:4px}
+  .top-actions .btn{background:var(--surface); box-shadow:var(--shadow)}
+  .pill{
+    display:inline-flex; align-items:center; gap:7px; height:28px; padding:0 12px; border-radius:999px;
+    background:var(--surface); box-shadow:var(--shadow); font-size:12px; color:var(--text-2); white-space:nowrap
+  }
+  .pill::before{content:""; width:7px; height:7px; border-radius:50%; background:#C7C7CC}
+  .pill.ok{color:#1D7A3C}.pill.ok::before{background:var(--green)}
+  .pill.warn{color:#8A5A00}.pill.warn::before{background:var(--orange)}
+
+  .grid{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:20px; align-items:start}
+  .card{background:var(--surface); border-radius:var(--r-card); box-shadow:var(--shadow)}
+
+  /* ---------- 控制条 ---------- */
+  .control{display:flex; flex-wrap:wrap; align-items:flex-end; gap:24px; padding:16px 20px; margin-bottom:20px}
+  .ctl{display:flex; flex-direction:column; gap:7px; min-width:0}
+  .ctl-label{font-size:11px; color:var(--text-3); font-weight:500; letter-spacing:.01em}
+  .ctl-row{display:flex; align-items:center; gap:7px; height:32px}
+  .mini{width:52px; height:32px; padding:0 6px; border:0; border-radius:9px; background:var(--fill); outline:none; font-size:13px; text-align:center; color:var(--text)}
+  .mini:focus{background:#fff; box-shadow:0 0 0 3px rgba(0,113,227,.18)}
+  .mini-sel{height:32px; max-width:240px; border:0; border-radius:9px; background:var(--fill); padding:0 10px; font-size:13px; color:var(--text)}
+  .mini-sel:focus{outline:none; box-shadow:0 0 0 3px rgba(0,113,227,.18)}
+  .mini-time{height:32px; width:92px; border:0; border-radius:9px; background:var(--fill); padding:0 8px; font-size:13px; color:var(--text)}
+  .unit{font-size:12px; color:var(--text-2); white-space:nowrap}
+  .chk{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--text); white-space:nowrap}
+  .pin-label{font-size:13px; color:var(--text-2); max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .pin-label.on{color:var(--text)}
+
+  /* ---------- 按钮 ---------- */
+  .btn{
+    height:34px; padding:0 16px; border-radius:10px; background:var(--fill); color:var(--text);
+    font-size:13.5px; font-weight:500; transition:background .15s, transform .06s; white-space:nowrap
+  }
+  .btn:hover{background:var(--fill-2)}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.4; cursor:not-allowed}
+  .btn.primary{background:var(--blue); color:#fff}
+  .btn.primary:hover{background:var(--blue-hover)}
+  .btn.ghost{background:transparent; color:var(--blue)}
+  .btn.ghost:hover{background:rgba(0,113,227,.08)}
+  .btn.sm{height:30px; padding:0 12px; font-size:12.5px; border-radius:8px}
+
+  /* ---------- 待办清单 ---------- */
+  .editor{padding:20px 20px 16px; min-width:0}
+  .card-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px}
+  .card-head h2{font-size:15px; margin:0; color:var(--text); font-weight:600; letter-spacing:-.01em}
+  .chips{display:flex; gap:2px; background:var(--fill); padding:2px; border-radius:9px}
+  .chip{border:0; background:transparent; font-size:12.5px; padding:5px 12px; border-radius:7px; color:var(--text-2); transition:background .15s, color .15s}
+  .chip:hover{color:var(--text)}
+  .chip.on{background:#fff; color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.08), 0 1px 1px rgba(0,0,0,.04)}
+
+  .addbar{display:flex; gap:8px; margin-bottom:14px}
+  .addbar input{
+    flex:1; min-width:0; height:40px; padding:0 14px; border:0; border-radius:11px; background:var(--fill);
+    outline:none; transition:background .15s, box-shadow .15s; font-size:14px
+  }
+  .addbar input:focus{background:#fff; box-shadow:0 0 0 3px rgba(0,113,227,.18)}
+
+  .list{min-height:120px}
+  .row{display:flex; align-items:center; gap:10px; height:46px; padding:0 8px; border-radius:11px; transition:background .12s; position:relative}
+  .row:hover{background:var(--fill)}
+  .row.dragging{opacity:.4}
+  .row.drop-top::before{content:""; position:absolute; left:10px; right:10px; top:-1px; height:2px; background:var(--blue); border-radius:2px}
+  .grip{color:#C7C7CC; font-size:13px; cursor:grab; user-select:none; width:14px; text-align:center; flex:0 0 auto}
+  .row.done .grip{opacity:.25; cursor:default}
+  .check{
+    width:20px; height:20px; flex:0 0 auto; border:1.6px solid #C7C7CC; background:transparent; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; padding:0; transition:all .15s
+  }
+  .check:hover{border-color:var(--blue)}
+  .row.done .check{background:var(--blue); border-color:var(--blue)}
+  .check .tick{width:9px; height:5px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px); opacity:0}
+  .row.done .check .tick{opacity:1}
+  .row .title{flex:1; min-width:0; border:0; background:transparent; outline:none; font-size:14.5px; padding:5px 0}
+  .row.done .title{color:var(--text-3); text-decoration:line-through}
+  .row .due{width:112px; flex:0 0 auto; border:0; background:transparent; outline:none; font-size:12px; color:var(--text-2); padding:2px 0; text-align:right}
+  .row .due:focus{color:var(--text)}
+  .row.overdue .due{color:var(--red); font-weight:600}
+  .row .due.empty{color:transparent; width:34px}
+  .row .due.empty::-webkit-calendar-picker-indicator{opacity:.45; margin:0 auto}
+  .row .pin{
+    width:24px; height:24px; flex:0 0 auto; border:0; background:transparent; color:#C7C7CC;
+    font-size:11px; line-height:1; border-radius:7px; opacity:.5; transition:opacity .12s, color .12s
+  }
+  .row:hover .pin{opacity:1}
+  .row .pin.on{opacity:1; color:var(--blue)}
+  .row .pin:hover{background:var(--fill-2)}
+  .row .del{
+    width:24px; height:24px; flex:0 0 auto; border:0; background:transparent; border-radius:7px; color:#C7C7CC;
+    font-size:16px; line-height:1; opacity:0; transition:opacity .12s, background .12s
+  }
+  .row:hover .del{opacity:1}
+  .row .del:hover{background:rgba(255,59,48,.10); color:var(--red)}
+  .empty{padding:38px 10px; text-align:center; color:var(--text-3); font-size:13.5px}
+  .stats{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-size:12px; color:var(--text-2)
+  }
+  .warnline{color:#8A5A00}
+
+  /* ---------- 设备预览 ---------- */
+  .device-panel{padding:20px; width:680px}
+  .device{
+    width:100%; border-radius:32px; padding:20px 20px 0;
+    background:linear-gradient(180deg,#FFFFFF 0%,#FAFAFC 62%,#F0F0F3 100%);
+    box-shadow:inset 0 1px 0 #fff, 0 1px 2px rgba(0,0,0,.08), 0 30px 60px -34px rgba(0,0,0,.45);
+  }
+  .screen-frame{background:#0B0B0C; border-radius:10px; padding:4px}
+  .screen{width:592px; height:304px; max-width:100%; background:#FCFCF8; border-radius:6px; overflow:hidden; position:relative}
+  .board{
+    width:296px; height:152px; transform:scale(2); transform-origin:top left; background:#fff; color:#000;
+    font-family:"ChillDuanSans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .board > div{width:100%; height:100%}
+  #deviceShot{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; image-rendering:pixelated}
+  .brand{text-align:center; padding:12px 0 14px; font-size:11px; letter-spacing:.32em; color:#C7C7CC; font-weight:600}
+
+  .tabs{display:flex; align-items:center; gap:4px; margin-top:18px; flex-wrap:wrap}
+  .tab{
+    height:32px; min-width:32px; padding:0 12px; border-radius:9px; background:var(--fill); color:var(--text-2);
+    font-size:12.5px; display:inline-flex; align-items:center; gap:5px; transition:background .15s, color .15s
+  }
+  .tab:hover{background:var(--fill-2)}
+  .tab.on{background:var(--text); color:#fff}
+  .tab .n{font-variant-numeric:tabular-nums}
+  .device-meta{font-size:12px; color:var(--text-3); margin-top:10px}
+  .push-row{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap}
+  .log{
+    margin-top:14px; font-size:12px; color:var(--text-2); max-height:120px; overflow:auto;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace; line-height:1.7
+  }
+  .log div{white-space:pre-wrap; word-break:break-all}
+  .log .ok{color:#1D7A3C}
+  .log .bad{color:var(--red)}
+  .log .warn{color:#8A5A00}
+
+  /* ---------- 个性化页 ---------- */
+  .col-left{display:flex; flex-direction:column; gap:20px; min-width:0}
+  .personal{padding:18px 20px 16px}
+  .tag-optional{font-size:11.5px; color:var(--text-2); background:var(--fill); border-radius:999px; padding:4px 10px; white-space:nowrap}
+  .prow{display:flex; align-items:center; gap:7px; margin-bottom:10px; flex-wrap:wrap}
+  .p-name{flex:0 0 auto; min-width:50px}
+  .spacer{flex:1 1 auto; min-width:0}
+  .p-input{height:32px; width:76px; border:0; border-radius:9px; background:var(--fill); padding:0 8px; font-size:12.5px; outline:none; color:var(--text)}
+  .p-input:focus{background:#fff; box-shadow:0 0 0 3px rgba(0,113,227,.18)}
+  .p-sel{height:32px; border:0; border-radius:9px; background:var(--fill); padding:0 6px; font-size:12.5px; color:var(--text)}
+  .p-key{width:92px}
+  .p-every{width:80px}
+  .p-act{height:32px; width:50px; padding:0; border-radius:9px; font-size:12px; flex:0 0 auto}
+  .hb-sel{height:28px; margin-left:8px; border:0; border-radius:8px; background:var(--fill); padding:0 8px; font-size:12.5px; color:var(--text)}
+
+  /* ---------- 弹窗 ---------- */
+  dialog{
+    border:0; border-radius:20px; padding:0; width:min(640px,calc(100vw - 32px));
+    background:var(--surface); color:var(--text);
+    box-shadow:0 40px 90px -40px rgba(0,0,0,.55)
+  }
+  dialog::backdrop{background:rgba(0,0,0,.26); backdrop-filter:saturate(180%) blur(18px)}
+  .dlg{padding:26px 28px 22px; max-height:86vh; overflow:auto}
+  .dlg h2{font-size:20px; margin:0 0 4px; font-weight:600; letter-spacing:-.02em}
+  .dlg .lead{margin:0 0 22px; color:var(--text-2); font-size:12.5px}
+  .field{margin-bottom:16px}
+  .field label{display:block; font-size:12px; color:var(--text-2); margin-bottom:7px}
+  .field .withbtn{display:flex; gap:8px}
+  .field input[type=text],.field input[type=password],.field select{
+    width:100%; height:40px; padding:0 13px; border:0; border-radius:11px; background:var(--fill); outline:none; font-size:14px
+  }
+  .field input:focus,.field select:focus{background:#fff; box-shadow:0 0 0 3px rgba(0,113,227,.18)}
+  .hint{font-size:12px; color:var(--text-3); margin:7px 0 0; line-height:1.65}
+  .hint a{color:var(--blue); text-decoration:none}
+  .row-actions{display:flex; gap:8px; margin:2px 0 14px; flex-wrap:wrap}
+  .probe{
+    background:var(--fill); border-radius:12px; padding:12px 14px; font-size:12px; white-space:pre-wrap;
+    word-break:break-word; margin:0 0 16px; font-family:ui-monospace,Consolas,monospace;
+    max-height:180px; overflow:auto; color:var(--text-2)
+  }
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .binding{display:flex; align-items:center; gap:10px; margin-bottom:9px}
+  .binding .lbl{width:64px; flex:0 0 auto; font-size:13px; color:var(--text-2)}
+  .binding select{flex:1; height:36px; border:0; border-radius:10px; background:var(--fill); padding:0 10px}
+  .sec-title{font-size:12px; color:var(--text-3); font-weight:600; margin:24px 0 12px; padding-top:18px; border-top:1px solid var(--line)}
+  .dlg-foot{
+    display:flex; justify-content:space-between; gap:10px; margin-top:16px; position:sticky; bottom:-22px;
+    background:var(--surface); padding:14px 0 4px; border-top:1px solid var(--line)
+  }
+  .dlg-foot .right{display:flex; gap:8px}
+  .field label.chk-line{display:flex; align-items:center; gap:12px; font-size:13.5px; color:var(--text); margin:0; cursor:pointer}
+
+  /* ---------- 提示 ---------- */
+  .toast{
+    position:fixed; left:50%; bottom:30px; transform:translate(-50%,16px);
+    background:rgba(29,29,31,.94); color:#fff; padding:12px 18px; border-radius:14px; font-size:13px;
+    opacity:0; pointer-events:none; transition:all .22s; z-index:50; max-width:min(560px,90vw);
+    box-shadow:0 20px 44px -20px rgba(0,0,0,.6); backdrop-filter:blur(20px)
+  }
+  .toast.on{opacity:1; transform:translate(-50%,0)}
+
+  /* ---------- iOS 风格开关（放在最后，覆盖 .chk input 之类） ---------- */
+  input[type=checkbox]{
+    -webkit-appearance:none; appearance:none; width:42px; height:26px; border-radius:13px;
+    background:var(--fill-2); position:relative; transition:background .2s; cursor:pointer;
+    flex:0 0 auto; margin:0; border:0
+  }
+  input[type=checkbox]::after{
+    content:""; position:absolute; top:2px; left:2px; width:22px; height:22px; border-radius:50%;
+    background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.25); transition:transform .2s
+  }
+  input[type=checkbox]:checked{background:var(--green)}
+  input[type=checkbox]:checked::after{transform:translateX(16px)}
+
+  @media (max-width:1120px){
+    .grid{grid-template-columns:1fr}
+    .device-panel{width:100%; overflow-x:auto}
+  }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Quote/0 · 待办看板</h1>
+      <p class="sub">待办只存这台电脑 · 画面通过 Dot 画板 API 下发 · 分页轮播交给设备</p>
+    </div>
+    <div class="top-actions">
+      <span class="pill" id="connPill">未配置</span>
+      <button class="btn sm" id="btnSettings">设置</button>
+    </div>
+  </header>
+
+  <section class="card control" id="controlBar">
+    <div class="ctl">
+      <span class="ctl-label">设备</span>
+      <div class="ctl-row">
+        <select id="devSelect" class="mini-sel"><option value="">— 未获取 —</option></select>
+        <button class="btn sm" id="btnDevices" title="从账号里拉设备列表">刷新</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">轮播间隔</span>
+      <div class="ctl-row">
+        <span class="unit">插电</span>
+        <input id="ivPower" class="mini" type="number" min="1" max="720" step="1" placeholder="15">
+        <span class="unit">分</span>
+        <span class="unit" style="margin-left:4px">电池</span>
+        <input id="ivBattery" class="mini" type="number" min="1" max="720" step="1" placeholder="60">
+        <span class="unit">分</span>
+        <button class="btn sm" id="btnApplyIv">写入</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">睡眠</span>
+      <div class="ctl-row">
+        <label class="chk"><input type="checkbox" id="sleepOn">夜间</label>
+        <input id="sleepStart" class="mini-time" type="time" value="22:00">
+        <span class="unit">–</span>
+        <input id="sleepEnd" class="mini-time" type="time" value="07:00">
+        <button class="btn sm" id="btnApplySleep">写入</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">今日重点</span>
+      <div class="ctl-row">
+        <span id="pinLabel" class="pin-label">未设置（点待办右侧的图钉）</span>
+        <button class="btn sm" id="btnClearPin">取消</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="col-left">
+    <section class="card editor">
+      <div class="card-head">
+        <h2>待办清单</h2>
+        <div class="chips" id="filters">
+          <button class="chip on" data-filter="all">全部</button>
+          <button class="chip" data-filter="open">未完成</button>
+          <button class="chip" data-filter="done">已完成</button>
+        </div>
+      </div>
+
+      <div class="addbar">
+        <input id="newTitle" type="text" placeholder="添加一条待办，回车保存" autocomplete="off">
+        <button class="btn" id="btnAdd">添加</button>
+      </div>
+
+      <div class="list" id="list"></div>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="card personal">
+      <div class="card-head">
+        <h2>个性化页</h2>
+        <span class="tag-optional">可选 · 不影响待办页数</span>
+      </div>
+      <p class="hint" style="margin:0 0 14px">每启用一个，就多占一张画板卡，排在待办页后面。都不启用就完全不碰待办看板。</p>
+
+      <div class="prow">
+        <label class="chk p-name"><input type="checkbox" id="weatherOn"> 天气</label>
+        <input id="weatherCity" class="p-input" type="text" placeholder="城市" autocomplete="off">
+        <span class="spacer"></span>
+        <select id="weatherKey" class="p-sel p-key"></select>
+        <select id="weatherEvery" class="p-sel p-every">
+          <option value="0">不自动</option>
+          <option value="60">1 小时</option>
+          <option value="180">3 小时</option>
+          <option value="1440">每天</option>
+        </select>
+        <button class="btn sm p-act" id="btnTestWeather" type="button">测试</button>
+      </div>
+
+      <div class="prow">
+        <label class="chk p-name"><input type="checkbox" id="quoteOn"> 金句</label>
+        <span class="spacer"></span>
+        <select id="quoteKey" class="p-sel p-key"></select>
+        <select id="quoteEvery" class="p-sel p-every">
+          <option value="0">不自动</option>
+          <option value="30">30 分钟</option>
+          <option value="60">1 小时</option>
+          <option value="180">3 小时</option>
+          <option value="1440">每天</option>
+        </select>
+        <button class="btn sm p-act" id="btnNextQuote" type="button">换一句</button>
+      </div>
+
+      <p class="hint" id="personalHint" style="margin:12px 0 0"></p>
+    </section>
+    </div>
+
+    <section class="card device-panel">
+      <div class="device">
+        <div class="screen-frame">
+          <div class="screen" id="screen">
+            <div class="board" id="board"></div>
+            <img id="deviceShot" alt="设备回传画面" hidden>
+          </div>
+        </div>
+        <div class="brand">dot.</div>
+      </div>
+
+      <div class="tabs" id="pageTabs"></div>
+      <div class="device-meta">296 × 152 px · 2.66 英寸电子墨水 · 预览按 2× 放大，像素几何与屏上一致</div>
+      <div class="push-row">
+        <button class="btn primary" id="btnPushAll">同步全部页</button>
+        <button class="btn" id="btnPushOne">推送当前页</button>
+        <button class="btn" id="btnNext">立即切下一页</button>
+        <button class="btn ghost" id="btnShot">看设备回传</button>
+      </div>
+      <label class="chk" style="margin-top:10px">
+        <input type="checkbox" id="autoDay">
+        跨天自动刷新（日期变了自动重推一次）
+      </label>
+      <label class="chk" style="margin-top:8px">
+        <input type="checkbox" id="autoSync">
+        自动同步（加 / 删 / 勾选待办后 5 秒推一次）
+      </label>
+      <label class="chk" style="margin-top:8px">
+        定时推送
+        <select id="heartbeat" class="hb-sel">
+          <option value="0">关</option>
+          <option value="15">每 15 分钟</option>
+          <option value="30">每 30 分钟</option>
+          <option value="60">每 1 小时</option>
+        </select>
+      </label>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+</div>
+
+<dialog id="settingsDlg">
+  <div class="dlg">
+    <h2>设置</h2>
+    <p class="lead">密钥只保存在本机浏览器里，不会上传到任何地方，也不会写进这个文件。</p>
+
+    <div class="field">
+      <label for="apiKey">API 密钥</label>
+      <div class="withbtn">
+        <input id="apiKey" type="password" placeholder="dot_app_xxxxxxxx" autocomplete="off" spellcheck="false">
+        <button class="btn" id="toggleKey" type="button">显示</button>
+      </div>
+      <p class="hint">Dot App → 我的 → 开放 API → 获取密钥。详见 <a href="https://dot.mindreset.tech/docs/service/studio/api/get_api" target="_blank" rel="noopener">官方文档</a>。</p>
+    </div>
+
+    <div class="field">
+      <label for="deviceId">设备序列号</label>
+      <input id="deviceId" type="text" placeholder="例如 ABCD1234ABCD" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="row-actions">
+      <button class="btn sm" id="btnTest" type="button">测试连接</button>
+      <button class="btn sm" id="btnDiscover" type="button">发现画板卡</button>
+    </div>
+    <pre class="probe" id="probe" hidden></pre>
+
+    <div class="sec-title">屏幕排版</div>
+    <div class="split">
+      <div class="field">
+        <label for="pageSize">每页条数</label>
+        <select id="pageSize">
+          <option value="2">2 条</option>
+          <option value="3">3 条</option>
+          <option value="4">4 条</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="pages">待办页数</label>
+        <select id="pages">
+          <option value="1">1 页</option>
+          <option value="2">2 页</option>
+          <option value="3">3 页</option>
+          <option value="4">4 页</option>
+          <option value="5">5 页</option>
+        </select>
+        <p class="hint" id="pageTotalHint" style="margin:6px 0 0">总页数 = 待办页数 + 附加页</p>
+      </div>
+    </div>
+    <div class="field">
+      <label class="chk-line">
+        <input type="checkbox" id="showDone">
+        <span>屏上也显示已完成条目（排在最后，划线灰字）</span>
+      </label>
+    </div>
+    <div class="field">
+      <label class="chk-line">
+        <input type="checkbox" id="showClock">
+        <span>右上角显示时间</span>
+      </label>
+      <p class="hint" style="margin:6px 0 0 52px">这是<b>最后一次推送</b>的时刻，不是会走的钟。设备轮播久了会停在那，想准就定期点一下同步。</p>
+    </div>
+
+    <div class="sec-title">画板卡绑定</div>
+    <p class="hint" style="margin:-2px 0 10px">每页对应 Dot App 循环列表里的一个「画板 API」卡片。点上面的「发现画板卡」自动填。</p>
+    <div id="bindings"></div>
+
+    <div class="sec-title">设备控制</div>
+    <p class="hint" style="margin:-2px 0 10px">轮播间隔、睡眠时段、切页、今日重点都在主页顶部的控制条上。</p>
+    <div class="row-actions">
+      <button class="btn sm" id="btnPinFixed" type="button">把今日重点推到固定卡（高级）</button>
+    </div>
+    <p class="hint">固定卡会占用一个<b>固定列表</b>里的画板卡，并且<b>在它的时间窗内压住轮播</b>，窗口结束才回到循环。日常置顶不需要这个。</p>
+
+    <div class="sec-title">数据</div>
+    <div class="row-actions">
+      <button class="btn sm" id="btnExport" type="button">导出 JSON</button>
+      <button class="btn sm" id="btnImport" type="button">导入 JSON</button>
+      <button class="btn sm" id="btnClear" type="button" style="color:#B3261E">清空待办</button>
+      <input type="file" id="fileInput" accept="application/json" hidden>
+    </div>
+
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;font-size:11.5px;color:var(--muted)">上手三步</summary>
+      <div class="hint" style="margin-top:8px;line-height:1.9">
+        1. Dot App 里拿到密钥和设备序列号，填在上面；<br>
+        2. 内容工坊 → 选中设备 → 循环列表 → 添加「画板 API」，要几页就加几个；<br>
+        3. 点「发现画板卡」绑定，保存，然后回来同步。
+      </div>
+    </details>
+
+    <div class="dlg-foot">
+      <button class="btn ghost" id="btnCloseDlg" type="button">关闭</button>
+      <div class="right">
+        <button class="btn" id="btnCancel" type="button">取消</button>
+        <button class="btn primary" id="btnSave" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =======================================================================
+     BOARD BUILDER — 纯函数区
+     这里产出的元素树，既给设备下发，也用来渲染预览：
+     也就是说你看到的预览和设备拿到的是同一个结构。
+     ======================================================================= */
+
+  var SCREEN_W = 296, SCREEN_H = 152;
+  var PAD_X = 11, PAD_Y = 8;
+  var LAYOUT_FULL = { tw: "p-[0px]", style: { padding: "0px" } };
+  var WEEK = ["周日","周一","周二","周三","周四","周五","周六"];
+
+  function n(type, tw, style, children){
+    var props = { style: style || {}, children: children === undefined ? "" : children };
+    if(tw) props.tw = tw;
+    return { type: type, props: props };
+  }
+  function font(px){ return "text-[" + px + "px]-chillduansans"; }
+
+  function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function parseYMD(s){
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || "");
+    if(!m) return null;
+    return new Date(+m[1], +m[2]-1, +m[3]);
+  }
+  function dueMeta(due, now){
+    var d = parseYMD(due);
+    if(!d) return null;
+    var diff = Math.round((startOfDay(d) - startOfDay(now)) / 86400000);
+    if(diff < 0)  return { text: "逾期", overdue: true,  relative: true };
+    if(diff === 0) return { text: "今天", overdue: false, relative: true };
+    if(diff === 1) return { text: "明天", overdue: false, relative: true };
+    return { text: (d.getMonth()+1) + "/" + d.getDate(), overdue: false, relative: false };
+  }
+
+  // 一屏能放几条，就用多大的字：条数越少，字越大
+  var LAYOUTS = {
+    2: { rowH: 43, gap: 4, title: 18, meta: 14, box: 14 },
+    3: { rowH: 28, gap: 3, title: 16, meta: 13, box: 12 },
+    4: { rowH: 21, gap: 2, title: 14, meta: 12, box: 11 }
+  };
+  function layoutOf(page){ return LAYOUTS[page.per] || LAYOUTS[3]; }
+
+  function pad2(x){ return (x < 10 ? "0" : "") + x; }
+  function fmtTime(d){ return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); }
+
+  function rowEl(t, now, L, pinnedId){
+    var done = !!t.done;
+    var meta = dueMeta(t.due, now);
+    var lh = Math.min(L.rowH - 3, L.title + 6) + "px";
+    var kids = [];
+    // 每行都留 3px 标记位，只有置顶那行涂黑 —— 保证勾选框纵向对齐
+    kids.push(n("div", "", {
+      width: "3px", height: (L.rowH - 9) + "px", flexShrink: "0",
+      backgroundColor: (pinnedId && t.id === pinnedId && !done) ? "#000000" : "#ffffff"
+    }, ""));
+    kids.push(n("div", "", {
+      width: L.box + "px", height: L.box + "px", flexShrink: "0",
+      border: "1px solid #000", borderRadius: "2px",
+      backgroundColor: done ? "#000000" : "#ffffff"
+    }, ""));
+    kids.push(n("span", font(L.title), {
+      flexGrow: "1", flexShrink: "1", flexBasis: "0%", minWidth: "0",
+      lineHeight: lh, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+      textDecoration: done ? "line-through" : "none",
+      // 1-bit 屏没有真灰阶：#8A8A8A 会被抖成稀疏点阵，小字号直接消失。完成态一律纯黑，靠删除线区分
+      color: "#000000"
+    }, t.title || "（未命名）"));
+    if(meta){
+      kids.push(n("span", font(L.meta), {
+        flexShrink: "0", lineHeight: lh,
+        fontWeight: meta.relative ? "700" : "400",
+        color: "#000000"
+      }, meta.text));
+    }
+    return n("div", "flex flex-row items-center shrink-0", { height: L.rowH + "px", gap: "6px" }, kids);
+  }
+
+  /**
+   * page = { index, pages, per, items, total, doneCount, undone, mode, showClock }
+   * mode: "list" | "summary" | "empty"
+   */
+  function buildWindowData(page, now, label){
+    now = now || new Date();
+    var posIdx = (label && label.index !== undefined) ? label.index : page.index;
+    var posTotal = (label && label.pages !== undefined) ? label.pages : page.pages;
+    var L = layoutOf(page);
+    var dateLabel = (now.getMonth()+1) + "月" + now.getDate() + "日 " + WEEK[now.getDay()];
+    var pct = page.total ? Math.round(page.doneCount / page.total * 100) : 0;
+    // 默认不显示时间：画板拿不到设备时钟，那个数字只会停在推送那一刻
+    var clock = page.showClock === true;
+
+    var header = n("div", "flex flex-row items-center justify-between shrink-0", { height: "18px" }, [
+      n("span", font(13), { fontWeight: "700", lineHeight: "18px" }, dateLabel),
+      n("span", font(13), { fontWeight: "700", lineHeight: "18px" },
+        clock ? fmtTime(now) : (page.doneCount + "/" + page.total))
+    ]);
+
+    var bar = n("div", "", {
+      marginTop: "4px", height: "3px", width: "100%", flexShrink: "0",
+      backgroundColor: "#E3E0D6"
+    }, n("div", "", { height: "3px", width: pct + "%", backgroundColor: "#000000" }, ""));
+
+    var body;
+    if(page.mode === "summary"){
+      body = n("div", "flex flex-col items-center justify-center flex-1 min-h-0", { gap: "2px" }, [
+        n("span", font(36), { fontWeight: "700", lineHeight: "34px" }, String(page.undone)),
+        n("span", font(13), { lineHeight: "16px" }, "条待完成"),
+        n("span", font(12), { lineHeight: "15px", color: "#000000" }, "全部 " + page.total + " 条 · 已完成 " + page.doneCount)
+      ]);
+    } else if(page.mode === "empty"){
+      body = n("div", "flex flex-col flex-1 items-center justify-center min-h-0", { gap: "4px" }, [
+        n("span", font(16), { fontWeight: "700" }, "暂无待办"),
+        n("span", font(12), { color: "#000000" }, "在左边加一条，然后同步")
+      ]);
+    } else {
+      var rows = page.items.map(function(t){ return rowEl(t, now, L, page.pinnedId); });
+      body = n("div", "flex flex-col flex-1 min-h-0 overflow-hidden", { marginTop: "4px", gap: L.gap + "px" }, rows);
+    }
+
+    var footer = n("div", "flex flex-row items-center justify-between shrink-0", { marginTop: "4px", height: "13px" }, [
+      n("span", font(11), { color: "#000000", lineHeight: "13px" }, (posIdx + 1) + " / " + posTotal),
+      n("span", font(11), { color: "#000000", lineHeight: "13px" },
+        clock ? ("完成 " + page.doneCount + "/" + page.total) : (page.undone + " 条待完成"))
+    ]);
+
+    var root = n("div", "flex flex-col w-full h-full bg-white text-black", {
+      padding: PAD_Y + "px " + PAD_X + "px", boxSizing: "border-box"
+    }, [header, bar, body, footer]);
+
+    return { default: [root] };
+  }
+
+  /**
+   * 固定内容卡片：整天钉一条，不参与轮播
+   */
+  function buildPinWindowData(item, now){
+    now = now || new Date();
+    var done = !!item.done;
+    var meta = dueMeta(item.due, now);
+    var dateLabel = (now.getMonth() + 1) + "/" + now.getDate();
+
+    var header = n("div", "flex flex-row items-center justify-between shrink-0", { height: "14px" }, [
+      n("span", font(11), { fontWeight: "700" }, "今日重点"),
+      n("span", font(11), { color: "#000000" }, dateLabel)
+    ]);
+
+    var rule = n("div", "", {
+      marginTop: "6px", height: "2px", width: "100%", backgroundColor: "#000000", flexShrink: "0"
+    }, "");
+
+    var title = n("span", font(20), {
+      fontWeight: "700", lineHeight: "26px", whiteSpace: "normal", wordBreak: "break-word",
+      overflow: "hidden", lineClamp: 2,
+      textDecoration: done ? "line-through" : "none",
+      color: "#000000"
+    }, item.title || "（未命名）");
+
+    var body = n("div", "flex flex-col justify-center flex-1 min-h-0 overflow-hidden", { marginTop: "6px" }, [title]);
+
+    var foot = n("div", "", { marginTop: "2px", height: "12px" }, [
+      n("span", font(10), {
+        fontWeight: meta && meta.relative ? "700" : "400",
+        color: "#000000"
+      }, done ? "已完成" : (meta ? meta.text : "没有截止日"))
+    ]);
+
+    var root = n("div", "flex flex-col w-full h-full bg-white text-black", {
+      padding: PAD_Y + "px " + PAD_X + "px", boxSizing: "border-box"
+    }, [header, rule, body, foot]);
+
+    return { default: [root] };
+  }
+
+  /* ---------------- 天气页 ---------------- */
+
+  // WMO weather code → 中文
+  function wmo(code){
+    if(code === 0) return "晴";
+    if(code === 1) return "少云";
+    if(code === 2) return "多云";
+    if(code === 3) return "阴";
+    if(code === 45 || code === 48) return "雾";
+    if(code >= 51 && code <= 57) return "毛毛雨";
+    if(code === 61 || code === 63 || code === 65) return "雨";
+    if(code === 66 || code === 67) return "冻雨";
+    if(code === 71 || code === 73 || code === 75 || code === 77) return "雪";
+    if(code === 80 || code === 81 || code === 82) return "阵雨";
+    if(code === 85 || code === 86) return "阵雪";
+    if(code === 95 || code === 96 || code === 99) return "雷阵雨";
+    return "—";
+  }
+
+  /**
+   * w = { city, data: { current:{...}, daily:{time[],weather_code[],temperature_2m_max[],temperature_2m_min[]} } }
+   * 版式：顶部城市+当前温度，下面横向 5 列（日期 / 天气 / 温度），底部湿度风速
+   */
+  function buildWeatherWindowData(w, now){
+    now = now || new Date();
+    var cur = (w && w.data && w.data.current) || {};
+    var daily = (w && w.data && w.data.daily) || {};
+
+    var times = daily.time || [];
+    var codes = daily.weather_code || [];
+    var his = daily.temperature_2m_max || [];
+    var los = daily.temperature_2m_min || [];
+
+    var t = (cur.temperature_2m === undefined || cur.temperature_2m === null) ? null : Math.round(cur.temperature_2m);
+    var headLeft = ((w && w.city) || "天气") + (t === null ? "" : "  " + t + "°");
+
+    var header = n("div", "flex flex-row items-center justify-between shrink-0", { height: "16px" }, [
+      n("span", font(12), { fontWeight: "700", lineHeight: "16px" }, headLeft),
+      n("span", font(10), { lineHeight: "16px" }, "未来 5 天")
+    ]);
+
+    var cols = [];
+    var n5 = Math.min(5, times.length);
+    for(var i = 0; i < n5; i++){
+      var label = "—";
+      var d = new Date(times[i] + "T00:00:00");
+      if(!isNaN(d.getTime())){
+        label = (i === 0) ? "今天" : ("周" + "日一二三四五六".charAt(d.getDay()));
+      }
+      var hi = (his[i] === undefined || his[i] === null) ? "—" : Math.round(his[i]);
+      var lo = (los[i] === undefined || los[i] === null) ? "—" : Math.round(los[i]);
+
+      cols.push(n("div", "flex flex-col items-center flex-1 min-w-0", { gap: "3px" }, [
+        n("span", font(11), {
+          fontWeight: i === 0 ? "700" : "400", lineHeight: "15px", whiteSpace: "nowrap"
+        }, label),
+        n("span", font(14), { fontWeight: "700", lineHeight: "19px", whiteSpace: "nowrap" }, wmo(codes[i])),
+        n("span", font(11), { lineHeight: "15px", whiteSpace: "nowrap" }, lo + "°~" + hi + "°")
+      ]));
+    }
+
+    var body;
+    if(cols.length === 0){
+      body = n("div", "flex flex-col flex-1 items-center justify-center min-h-0", {}, [
+        n("span", font(11), {}, "暂无预报数据")
+      ]);
+    }else{
+      body = n("div", "flex flex-row items-center flex-1 min-h-0", { marginTop: "6px", gap: "2px" }, cols);
+    }
+
+    var footBits = [];
+    if(cur.relative_humidity_2m !== undefined && cur.relative_humidity_2m !== null)
+      footBits.push("湿度 " + Math.round(cur.relative_humidity_2m) + "%");
+    if(cur.wind_speed_10m !== undefined && cur.wind_speed_10m !== null)
+      footBits.push("风 " + Math.round(cur.wind_speed_10m) + "km/h");
+    // 带上数据时间：一眼能看出卡上是不是旧数据
+    if(w && w.ts){
+      var gt = new Date(w.ts);
+      footBits.push("更新 " + (gt.getMonth() + 1) + "/" + gt.getDate() + " " +
+        pad2(gt.getHours()) + ":" + pad2(gt.getMinutes()));
+    }
+
+    var foot = n("div", "", { marginTop: "4px", height: "12px" }, [
+      n("span", font(9), { lineHeight: "12px" }, footBits.join(" · ") || " ")
+    ]);
+
+    var root = n("div", "flex flex-col w-full h-full bg-white text-black", {
+      padding: PAD_Y + "px " + PAD_X + "px", boxSizing: "border-box"
+    }, [header, body, foot]);
+
+    return { default: [root] };
+  }
+
+  /* ---------------- 金句页 ---------------- */
+
+  function buildQuoteWindowData(q, now){
+    now = now || new Date();
+    var dateLabel = (now.getMonth() + 1) + "/" + now.getDate();
+
+    var header = n("div", "flex flex-row items-center justify-between shrink-0", { height: "14px" }, [
+      n("span", font(11), { fontWeight: "700", lineHeight: "14px" }, "毛选金句"),
+      n("span", font(10), { lineHeight: "14px" }, dateLabel)
+    ]);
+
+    var text = n("span", font(16), {
+      lineHeight: "22px", whiteSpace: "normal", wordBreak: "break-word",
+      overflow: "hidden", lineClamp: 4, color: "#000000"
+    }, "“" + q.text + "”");
+
+    var body = n("div", "flex flex-col justify-center flex-1 min-h-0 overflow-hidden", { marginTop: "4px" }, [text]);
+
+    var foot = n("div", "", { marginTop: "2px", height: "14px" }, [
+      n("span", font(9), {
+        lineHeight: "14px", fontWeight: "700",
+        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"
+      }, "—— " + q.author)
+    ]);
+
+    var root = n("div", "flex flex-col w-full h-full bg-white text-black", {
+      padding: PAD_Y + "px " + PAD_X + "px", boxSizing: "border-box"
+    }, [header, body, foot]);
+
+    return { default: [root] };
+  }
+
+  /* ======================= 纯函数区结束 ======================= */
+
+
+  /* ---------------- 小工具 ---------------- */
+  var $ = function(sel){ return document.querySelector(sel); };
+  var uid = function(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); };
+  var KEY_TODOS = "q0board.todos.v1";
+  var KEY_SETTINGS = "q0board.settings.v1";
+  var KEY_CARDS = "q0board.cards.v1";
+
+  function pad2(x){ return (x < 10 ? "0" : "") + x; }
+  function hhmm(d){ return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); }
+
+  var SEED = [
+    { title: "确认 Quote/0 看板做成什么样", done: true,  due: "" },
+    { title: "在 Dot App 里加 3 个「画板 API」卡片", done: false, due: "" },
+    { title: "填入 API 密钥与设备序列号", done: false, due: "" },
+    { title: "推送第一版看板，看真机效果", done: false, due: "" },
+    { title: "调每页条数与字号，找到最舒服的密度", done: false, due: "" },
+    { title: "把设备吸在伸手能碰到的地方", done: false, due: "" }
+  ];
+
+  // 毛选金句（本地清单，不依赖网络）：均出自《毛泽东选集》一至四卷，按篇目分组并注明出处
+  var QUOTES = [
+    // 《中国社会各阶级的分析》
+    { text: "谁是我们的敌人？谁是我们的朋友？这个问题是革命的首要问题。", author: "毛泽东《中国社会各阶级的分析》" },
+    // 《湖南农民运动考察报告》
+    { text: "革命不是请客吃饭，不是做文章，不是绘画绣花。", author: "毛泽东《湖南农民运动考察报告》" },
+    { text: "矫枉必须过正，不过正不能矫枉。", author: "毛泽东《湖南农民运动考察报告》" },
+    { text: "没有贫农，便没有革命。", author: "毛泽东《湖南农民运动考察报告》" },
+    // 《星星之火，可以燎原》
+    { text: "星星之火，可以燎原。", author: "毛泽东《星星之火，可以燎原》" },
+    { text: "它是站在海岸遥望海中已经看得见桅杆尖头了的一只航船。", author: "毛泽东《星星之火，可以燎原》" },
+    // 《反对本本主义》
+    { text: "没有调查，就没有发言权。", author: "毛泽东《反对本本主义》" },
+    { text: "调查就像十月怀胎，解决问题就像一朝分娩。", author: "毛泽东《反对本本主义》" },
+    { text: "中国革命斗争的胜利要靠中国同志了解中国情况。", author: "毛泽东《反对本本主义》" },
+    // 《关心群众生活，注意工作方法》
+    { text: "关心群众生活，注意工作方法。", author: "毛泽东《关心群众生活，注意工作方法》" },
+    { text: "一切群众的实际生活问题，都是我们应当注意的问题。", author: "毛泽东《关心群众生活，注意工作方法》" },
+    { text: "我们不但要提出任务，而且要解决完成任务的方法问题。", author: "毛泽东《关心群众生活，注意工作方法》" },
+    // 《论反对日本帝国主义的策略》
+    { text: "长征是宣言书，长征是宣传队，长征是播种机。", author: "毛泽东《论反对日本帝国主义的策略》" },
+    { text: "我们中华民族有同自己的敌人血战到底的气概。", author: "毛泽东《论反对日本帝国主义的策略》" },
+    // 《中国革命战争的战略问题》
+    { text: "读书是学习，使用也是学习，而且是更重要的学习。", author: "毛泽东《中国革命战争的战略问题》" },
+    { text: "指挥员的正确的部署来源于正确的决心。", author: "毛泽东《中国革命战争的战略问题》" },
+    { text: "敌进我退，敌驻我扰，敌疲我打，敌退我追。", author: "毛泽东《中国革命战争的战略问题》" },
+    // 《实践论》
+    { text: "你要知道梨子的滋味，你就得变革梨子，亲口吃一吃。", author: "毛泽东《实践论》" },
+    { text: "感觉到了的东西，我们不能立刻理解它，只有理解了的东西才更深刻地感觉它。", author: "毛泽东《实践论》" },
+    { text: "实践、认识、再实践、再认识，这种形式，循环往复以至无穷。", author: "毛泽东《实践论》" },
+    { text: "理论的基础是实践，又转过来为实践服务。", author: "毛泽东《实践论》" },
+    { text: "认识从实践始，经过实践得到了理论的认识，还须再回到实践去。", author: "毛泽东《实践论》" },
+    { text: "一切真知都是从直接经验发源的。", author: "毛泽东《实践论》" },
+    // 《矛盾论》
+    { text: "外因是变化的条件，内因是变化的根据，外因通过内因而起作用。", author: "毛泽东《矛盾论》" },
+    { text: "研究问题，忌带主观性、片面性和表面性。", author: "毛泽东《矛盾论》" },
+    { text: "矛盾着的对立面又统一，又斗争，由此推动事物的运动和变化。", author: "毛泽东《矛盾论》" },
+    { text: "事物发展的根本原因，不是在事物的外部而是在事物的内部。", author: "毛泽东《矛盾论》" },
+    { text: "不同质的矛盾，只有用不同质的方法才能解决。", author: "毛泽东《矛盾论》" },
+    { text: "共性个性、绝对相对的道理，是关于事物矛盾的问题的精髓。", author: "毛泽东《矛盾论》" },
+    { text: "捉住了这个主要矛盾，一切问题就迎刃而解了。", author: "毛泽东《矛盾论》" },
+    // 《论持久战》
+    { text: "兵民是胜利之本。", author: "毛泽东《论持久战》" },
+    { text: "战争的伟力之最深厚的根源，存在于民众之中。", author: "毛泽东《论持久战》" },
+    { text: "武器是战争的重要的因素，但不是决定的因素，决定的因素是人不是物。", author: "毛泽东《论持久战》" },
+    { text: "战争是政治的继续。", author: "毛泽东《论持久战》" },
+    { text: "保存自己，消灭敌人。", author: "毛泽东《论持久战》" },
+    { text: "亡国论是不对的，速胜论也是不对的。", author: "毛泽东《论持久战》" },
+    // 《战争和战略问题》
+    { text: "枪杆子里面出政权。", author: "毛泽东《战争和战略问题》" },
+    { text: "我们的原则是党指挥枪，而决不容许枪指挥党。", author: "毛泽东《战争和战略问题》" },
+    // 《论联合政府》
+    { text: "战争教育了人民，人民将赢得战争，赢得和平，又赢得进步。", author: "毛泽东《论联合政府》" },
+    { text: "知无不言，言无不尽；言者无罪，闻者足戒。", author: "毛泽东《论联合政府》" },
+    { text: "人民，只有人民，才是创造世界历史的动力。", author: "毛泽东《论联合政府》" },
+    { text: "全心全意地为人民服务，一刻也不脱离群众。", author: "毛泽东《论联合政府》" },
+    { text: "没有一个人民的军队，便没有人民的一切。", author: "毛泽东《论联合政府》" },
+    { text: "紧紧地和中国人民站在一起，全心全意地为中国人民服务。", author: "毛泽东《论联合政府》" },
+    { text: "放手发动群众，壮大人民力量。", author: "毛泽东《论联合政府》" },
+    // 《反对自由主义》
+    { text: "事不关己，高高挂起；明知不对，少说为佳。", author: "毛泽东《反对自由主义》" },
+    { text: "自由主义是一种腐蚀剂，使团结涣散，关系松懈，工作消极。", author: "毛泽东《反对自由主义》" },
+    { text: "一个共产党员，应该是襟怀坦白，忠实，积极。", author: "毛泽东《反对自由主义》" },
+    // 《中国共产党在民族战争中的地位》
+    { text: "政治路线确定之后，干部就是决定的因素。", author: "毛泽东《中国共产党在民族战争中的地位》" },
+    { text: "共产党员应是实事求是的模范，又是具有远见卓识的模范。", author: "毛泽东《中国共产党在民族战争中的地位》" },
+    { text: "指导伟大的革命，要有伟大的党，要有许多最好的干部。", author: "毛泽东《中国共产党在民族战争中的地位》" },
+    // 《〈共产党人〉发刊词》
+    { text: "统一战线，武装斗争，党的建设，是战胜敌人的三个法宝。", author: "毛泽东《〈共产党人〉发刊词》" },
+    // 《中国革命和中国共产党》
+    { text: "中华民族不但以刻苦耐劳著称于世，同时又是酷爱自由、富于革命传统的民族。", author: "毛泽东《中国革命和中国共产党》" },
+    // 《新民主主义论》
+    { text: "一定的文化是一定社会的政治和经济在观念形态上的反映。", author: "毛泽东《新民主主义论》" },
+    { text: "鲁迅的方向，就是中华民族新文化的方向。", author: "毛泽东《新民主主义论》" },
+    // 《改造我们的学习》
+    { text: "实事求是。", author: "毛泽东《改造我们的学习》" },
+    { text: "墙上芦苇，头重脚轻根底浅；山间竹笋，嘴尖皮厚腹中空。", author: "毛泽东《改造我们的学习》" },
+    { text: "闭塞眼睛捉麻雀。", author: "毛泽东《改造我们的学习》" },
+    { text: "马克思列宁主义的普遍真理和中国革命的具体实践相结合。", author: "毛泽东《改造我们的学习》" },
+    // 《整顿党的作风》
+    { text: "惩前毖后，治病救人。", author: "毛泽东《整顿党的作风》" },
+    { text: "有的放矢。", author: "毛泽东《整顿党的作风》" },
+    { text: "主观主义、宗派主义、党八股，这三股歪风。", author: "毛泽东《整顿党的作风》" },
+    // 《反对党八股》
+    { text: "空话连篇，言之无物。", author: "毛泽东《反对党八股》" },
+    { text: "无的放矢，不看对象。", author: "毛泽东《反对党八股》" },
+    { text: "语言这东西，不是随便可以学好的，非下苦功不可。", author: "毛泽东《反对党八股》" },
+    { text: "射箭要看靶子，弹琴要看听众。", author: "毛泽东《反对党八股》" },
+    // 《在延安文艺座谈会上的讲话》
+    { text: "为什么人的问题，是一个根本的问题，原则的问题。", author: "毛泽东《在延安文艺座谈会上的讲话》" },
+    { text: "人民生活是一切文学艺术的取之不尽、用之不竭的唯一的源泉。", author: "毛泽东《在延安文艺座谈会上的讲话》" },
+    { text: "我们的文学艺术都是为人民大众的。", author: "毛泽东《在延安文艺座谈会上的讲话》" },
+    // 《关于领导方法的若干问题》
+    { text: "从群众中来，到群众中去。", author: "毛泽东《关于领导方法的若干问题》" },
+    { text: "一般和个别相结合，领导和群众相结合。", author: "毛泽东《关于领导方法的若干问题》" },
+    { text: "任何工作任务，如果没有普遍的号召，就不能动员广大群众行动起来。", author: "毛泽东《关于领导方法的若干问题》" },
+    // 《为人民服务》
+    { text: "为人民服务。", author: "毛泽东《为人民服务》" },
+    { text: "人固有一死，或重于泰山，或轻于鸿毛。", author: "毛泽东《为人民服务》" },
+    { text: "我们都是来自五湖四海，为了一个共同的革命目标，走到一起来了。", author: "毛泽东《为人民服务》" },
+    { text: "我们的同志在困难的时候，要看到成绩，要看到光明，要提高我们的勇气。", author: "毛泽东《为人民服务》" },
+    { text: "只要我们为人民的利益坚持好的，为人民的利益改正错的，我们这个队伍就一定会兴旺起来。", author: "毛泽东《为人民服务》" },
+    // 《愚公移山》
+    { text: "下定决心，不怕牺牲，排除万难，去争取胜利。", author: "毛泽东《愚公移山》" },
+    // 《抗日战争胜利后的时局和我们的方针》
+    { text: "针锋相对，寸土必争。", author: "毛泽东《抗日战争胜利后的时局和我们的方针》" },
+    { text: "蒋介石对于人民是寸权必夺，寸利必得。", author: "毛泽东《抗日战争胜利后的时局和我们的方针》" },
+    // 《和美国记者斯特朗的谈话》
+    { text: "一切反动派都是纸老虎。", author: "毛泽东《斯特朗的谈话》" },
+    // 《目前形势和我们的任务》
+    { text: "不打无准备之仗，不打无把握之仗。", author: "毛泽东《目前形势和我们的任务》" },
+    { text: "伤其十指不如断其一指。", author: "毛泽东《目前形势和我们的任务》" },
+    // 《关于情况的通报》
+    { text: "政策和策略是党的生命。", author: "毛泽东《关于情况的通报》" },
+    // 《将革命进行到底》
+    { text: "将革命进行到底。", author: "毛泽东《将革命进行到底》" },
+    { text: "我们决不怜惜蛇一样的恶人。", author: "毛泽东《将革命进行到底》" },
+    // 《七届二中全会报告》
+    { text: "夺取全国胜利，这只是万里长征走完了第一步。", author: "毛泽东《七届二中全会报告》" },
+    { text: "务必使同志们继续地保持谦虚、谨慎、不骄、不躁的作风。", author: "毛泽东《七届二中全会报告》" },
+    { text: "务必使同志们继续地保持艰苦奋斗的作风。", author: "毛泽东《七届二中全会报告》" },
+    { text: "可能有这样一些共产党人，他们经不起人们用糖衣裹着的炮弹的攻击。", author: "毛泽东《七届二中全会报告》" },
+    // 《论人民民主专政》
+    { text: "十月革命一声炮响，给我们送来了马克思列宁主义。", author: "毛泽东《论人民民主专政》" },
+    { text: "帝国主义者和国内反动派决不甘心于他们的失败。", author: "毛泽东《论人民民主专政》" },
+    // 《党委会的工作方法》
+    { text: "党委书记要善于当班长。", author: "毛泽东《党委会的工作方法》" },
+    { text: "弹钢琴要十个指头都动作，不能有的动，有的不动。", author: "毛泽东《党委会的工作方法》" },
+    { text: "不懂就是不懂，不要装懂。", author: "毛泽东《党委会的工作方法》" },
+    { text: "胸中有数。", author: "毛泽东《党委会的工作方法》" },
+    { text: "安民告示。", author: "毛泽东《党委会的工作方法》" },
+    // 《纪念白求恩》
+    { text: "一个人能力有大小，但只要有这点精神，就是一个高尚的人，一个纯粹的人。", author: "毛泽东《纪念白求恩》" },
+    { text: "白求恩同志毫不利己专门利人的精神。", author: "毛泽东《纪念白求恩》" },
+    // 《〈农村调查〉的序言和跋》
+    { text: "眼睛向下，不要只是昂首望天。", author: "毛泽东《〈农村调查〉的序言和跋》" }
+  ];
+
+  var state = {
+    todos: [],
+    settings: {
+      apiKey: "", deviceId: "",
+      pageSize: 3, pages: 3, showDone: true, showClock: false,
+      bindings: [],
+      pinnedId: null, fixedKey: "", lastPushDate: "", autoDay: true, autoSync: true,
+      heartbeatMin: 30, heartbeatNextAt: 0,
+      sleepOn: false, sleepStart: "22:00", sleepEnd: "07:00",
+      weatherOn: false, weatherCity: "", weatherKey: "", weather: null,
+      weatherEveryMin: 1440, weatherNextAt: 0,
+      quoteOn: false, quoteKey: "", quoteEveryMin: 0, quoteIndex: 0, quoteNextAt: 0
+    },
+    cards: [],
+    filter: "all",
+    currentPage: 0,
+    lastTest: null
+  };
+
+  function load(){
+    try{
+      var t = JSON.parse(localStorage.getItem(KEY_TODOS) || "null");
+      if(Array.isArray(t)) state.todos = t;
+      else state.todos = SEED.map(function(s){ return { id: uid(), title: s.title, done: s.done, due: s.due }; });
+    }catch(e){ state.todos = SEED.map(function(s){ return { id: uid(), title: s.title, done: s.done, due: s.due }; }); }
+
+    try{
+      var s = JSON.parse(localStorage.getItem(KEY_SETTINGS) || "null");
+      if(s && typeof s === "object") Object.assign(state.settings, s);
+    }catch(e){}
+    if(!Array.isArray(state.settings.bindings)) state.settings.bindings = [];
+
+    // 天气刷新只有这几档；旧版本存过 30 分钟之类的一律归到「每天」
+    var okEvery = [0, 60, 180, 1440];
+    if(okEvery.indexOf(+state.settings.weatherEveryMin) < 0) state.settings.weatherEveryMin = 1440;
+
+    try{
+      var c = JSON.parse(localStorage.getItem(KEY_CARDS) || "null");
+      if(Array.isArray(c)) state.cards = c;
+    }catch(e){}
+  }
+  function saveTodos(){
+    try{ localStorage.setItem(KEY_TODOS, JSON.stringify(state.todos)); }catch(e){}
+  }
+  var _storeWarned = false;
+  function saveSettings(){
+    try{
+      localStorage.setItem(KEY_SETTINGS, JSON.stringify(state.settings));
+      return true;
+    }catch(e){
+      if(!_storeWarned){
+        _storeWarned = true;
+        try{ log("⚠ 浏览器存储不可用（" + (e && e.message ? e.message : "写入失败") + "），设置不会被保存", "bad"); }catch(_){}
+        toast("浏览器存储不可用，设置不会被保存");
+      }
+      return false;
+    }
+  }
+  function saveCards(){
+    try{ localStorage.setItem(KEY_CARDS, JSON.stringify(state.cards)); }catch(e){}
+  }
+
+  /* ---------------- 分页模型 ---------------- */
+  function buildAll(){
+    var s = state.settings;
+    var all = state.todos;
+    var open = all.filter(function(t){ return !t.done; });
+    var done = all.filter(function(t){ return !!t.done; });
+
+    // 置顶：钉住的那条永远排第一页第一行
+    var pinned = null;
+    if(s.pinnedId){
+      for(var pi = 0; pi < open.length; pi++){
+        if(open[pi].id === s.pinnedId){ pinned = open[pi]; break; }
+      }
+      if(pinned){
+        open = [pinned].concat(open.filter(function(t){ return t.id !== pinned.id; }));
+      }
+    }
+
+    var ordered = (s.showDone ? open.concat(done) : open);
+
+    var per = Math.max(1, Math.min(4, +s.pageSize || 4));
+    var pages = Math.max(1, Math.min(6, +s.pages || 3));
+    var total = all.length;
+    var doneCount = done.length;
+    var undone = total - doneCount;
+
+    var out = [];
+    for(var i = 0; i < pages; i++){
+      var items = ordered.slice(i * per, i * per + per);
+      var mode = "list";
+      if(items.length === 0) mode = total === 0 ? "empty" : "summary";
+      out.push({
+        index: i, pages: pages, per: per, items: items,
+        total: total, doneCount: doneCount, undone: undone, mode: mode,
+        showClock: s.showClock === true,
+        pinnedId: pinned ? pinned.id : null
+      });
+    }
+    return {
+      pages: out, total: total, doneCount: doneCount, undone: undone,
+      capacity: pages * per,
+      hidden: Math.max(0, ordered.length - pages * per),
+      per: per
+    };
+  }
+
+  /* ---------------- 预览渲染：设备元素树 → DOM ---------------- */
+  var FONT_STACK = {
+    chillduansans: '"ChillDuanSans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif',
+    chillksans:    '"ChillKSans","PingFang SC","Microsoft YaHei",sans-serif',
+    zpix:          '"Zpix","Microsoft YaHei",monospace'
+  };
+
+  function applyTw(el, tw){
+    if(!tw) return;
+    var parts = String(tw).split(/\s+/), m;
+    for(var i = 0; i < parts.length; i++){
+      var c = parts[i];
+      if(!c) continue;
+      if(c === "flex") el.style.display = "flex";
+      else if(c === "flex-row") el.style.flexDirection = "row";
+      else if(c === "flex-col") el.style.flexDirection = "column";
+      else if(c === "flex-1") el.style.flex = "1 1 0%";
+      else if(c === "shrink-0") el.style.flexShrink = "0";
+      else if(c === "grow") el.style.flexGrow = "1";
+      else if(c === "items-center") el.style.alignItems = "center";
+      else if(c === "items-start") el.style.alignItems = "flex-start";
+      else if(c === "items-end") el.style.alignItems = "flex-end";
+      else if(c === "justify-between") el.style.justifyContent = "space-between";
+      else if(c === "justify-center") el.style.justifyContent = "center";
+      else if(c === "justify-end") el.style.justifyContent = "flex-end";
+      else if(c === "w-full") el.style.width = "100%";
+      else if(c === "h-full") el.style.height = "100%";
+      else if(c === "min-w-0") el.style.minWidth = "0";
+      else if(c === "min-h-0") el.style.minHeight = "0";
+      else if(c === "overflow-hidden") el.style.overflow = "hidden";
+      else if(c === "bg-white") el.style.backgroundColor = "#ffffff";
+      else if(c === "bg-black") el.style.backgroundColor = "#000000";
+      else if(c === "text-white") el.style.color = "#ffffff";
+      else if(c === "text-black") el.style.color = "#000000";
+      else if(c === "font-bold") el.style.fontWeight = "700";
+      else if((m = /^gap-\[(\d+)px\]$/.exec(c))) el.style.gap = m[1] + "px";
+      else if((m = /^p-\[(\d+)px\]$/.exec(c))) el.style.padding = m[1] + "px";
+      else if((m = /^px-\[(\d+)px\]$/.exec(c))){ el.style.paddingLeft = m[1] + "px"; el.style.paddingRight = m[1] + "px"; }
+      else if((m = /^py-\[(\d+)px\]$/.exec(c))){ el.style.paddingTop = m[1] + "px"; el.style.paddingBottom = m[1] + "px"; }
+      else if((m = /^w-\[(\d+)px\]$/.exec(c))) el.style.width = m[1] + "px";
+      else if((m = /^h-\[(\d+)px\]$/.exec(c))) el.style.height = m[1] + "px";
+      else if((m = /^rounded-\[(\d+)px\]$/.exec(c))) el.style.borderRadius = m[1] + "px";
+      else if((m = /^text-\[([\d.]+)px\]-([a-z0-9.]+)$/i.exec(c))){
+        el.style.fontSize = m[1] + "px";
+        el.style.fontFamily = FONT_STACK[m[2].toLowerCase()] || FONT_STACK.chillduansans;
+      }
+    }
+  }
+
+  function toDom(node){
+    var el;
+    if(node.type === "img"){
+      el = document.createElement("img");
+      el.alt = "";
+      el.src = node.props.src || "";
+    }else{
+      el = document.createElement(node.type === "span" ? "span" : "div");
+    }
+    applyTw(el, node.props.tw);
+    var st = node.props.style || {};
+    for(var k in st){ if(Object.prototype.hasOwnProperty.call(st, k)) el.style[k] = st[k]; }
+    var ch = node.props.children;
+    if(typeof ch === "string") el.textContent = ch;
+    else if(Array.isArray(ch)) ch.forEach(function(c){ if(c) el.appendChild(toDom(c)); });
+    else if(ch && typeof ch === "object") el.appendChild(toDom(ch));
+    return el;
+  }
+
+  // 轮播页列表：待办页 + 天气 + 金句，按设备循环列表里的真实顺序排
+  function rotationPages(){
+    var s = state.settings;
+    var all = buildAll();
+    var keyPos = {};
+    state.cards.forEach(function(c, i){ if(c.key) keyPos[c.key] = i; });
+
+    var list = [];
+    all.pages.forEach(function(p, i){
+      var key = s.bindings[i] && s.bindings[i].key;
+      list.push({
+        kind: "todos", page: p, key: key,
+        pos: (key && keyPos[key] !== undefined) ? keyPos[key] : 900 + i
+      });
+    });
+    if(s.weatherOn && s.weatherKey){
+      list.push({ kind: "weather", key: s.weatherKey,
+        pos: keyPos[s.weatherKey] !== undefined ? keyPos[s.weatherKey] : 950 });
+    }
+    if(s.quoteOn && s.quoteKey){
+      list.push({ kind: "quote", key: s.quoteKey,
+        pos: keyPos[s.quoteKey] !== undefined ? keyPos[s.quoteKey] : 960 });
+    }
+    list.sort(function(a, b){ return a.pos - b.pos; });
+    list.forEach(function(p, i){ p.index = i; });
+    return { list: list, all: all };
+  }
+
+  // 有页没绑卡时，按剩余画板卡自动补绑 —— 否则那一页永远停在旧内容
+  function autoBindUnbound(){
+    var s = state.settings;
+    if(!state.cards.length) return false;
+
+    var used = {};
+    s.bindings.forEach(function(b){ if(b && b.key) used[b.key] = true; });
+    if(s.weatherOn && s.weatherKey) used[s.weatherKey] = true;
+    if(s.quoteOn && s.quoteKey) used[s.quoteKey] = true;
+
+    var free = state.cards
+      .filter(function(c){ return c.key && !used[c.key]; })
+      .map(function(c){ return c.key; });
+    if(!free.length) return false;
+
+    var changed = false;
+    for(var i = 0; i < s.pages && free.length; i++){
+      if(!s.bindings[i] || !s.bindings[i].key){
+        s.bindings[i] = { key: free.shift() };
+        changed = true;
+      }
+    }
+    if(changed){
+      saveSettings();
+      renderBindings();
+      log("有页没绑卡，已按剩余画板卡自动补绑", "warn");
+    }
+    return changed;
+  }
+
+  function quoteOf(index){
+    var i = ((index % QUOTES.length) + QUOTES.length) % QUOTES.length;
+    return QUOTES[i];
+  }
+
+  function windowDataFor(p, totalPages, now){
+    now = now || new Date();
+    if(p.kind === "weather"){
+      var w = state.settings.weather;
+      if(!w) return buildWeatherWindowData({ city: state.settings.weatherCity || "天气", data: {} }, now);
+      return buildWeatherWindowData(w, now);
+    }
+    if(p.kind === "quote") return buildQuoteWindowData(quoteOf(state.settings.quoteIndex), now);
+    return buildWindowData(p.page, now);
+  }
+
+  function renderPreview(){
+    var rot = rotationPages();
+    var idx = Math.min(state.currentPage, rot.list.length - 1);
+    if(idx < 0) idx = 0;
+    state.currentPage = idx;
+
+    var host = $("#board");
+    host.innerHTML = "";
+    host.appendChild(toDom(windowDataFor(rot.list[idx], rot.list.length, new Date()).default[0]));
+
+    renderTabs(rot);
+    renderStats(rot);
+  }
+
+  function renderTabs(rot){
+    var host = $("#pageTabs");
+    host.innerHTML = "";
+    rot.list.forEach(function(p, i){
+      var b = document.createElement("button");
+      b.className = "tab" + (i === state.currentPage ? " on" : "");
+      // 待办页显示自己的页号（1..N），个性化页用自己的名字 —— 两套编号各自独立
+      var label = p.kind === "todos" ? (p.page.index + 1)
+                : (p.kind === "weather" ? "天气" : "金句");
+      b.innerHTML = '<span class="n">' + label + "</span>";
+      var tip = p.kind === "todos" ? ("待办 · " + p.page.items.length + " 条")
+              : (p.kind === "weather" ? "天气" : "金句");
+      b.title = "第 " + (i + 1) + " 页 " + tip + (p.key ? "" : " · 未绑定画板卡");
+      b.addEventListener("click", function(){ state.currentPage = i; renderPreview(); });
+      host.appendChild(b);
+    });
+  }
+
+  function renderStats(rot){
+    var el = $("#stats");
+    var all = rot.all;
+    var extras = [];
+    if(state.settings.weatherOn) extras.push("天气");
+    if(state.settings.quoteOn) extras.push("金句");
+
+    var unbound = 0;
+    rot.list.forEach(function(p){ if(p.kind === "todos" && !p.key) unbound++; });
+
+    var parts = ["共 " + all.total + " 条", "未完成 " + all.undone];
+    if(unbound > 0){
+      parts.push('<span class="warnline">' + unbound + " 页没绑画板卡，屏上不会更新</span>");
+    }else if(all.hidden > 0){
+      parts.push('<span class="warnline">还有 ' + all.hidden + " 条没排上屏</span>");
+    }else{
+      parts.push("每页 " + all.per + " 条 · " + rot.list.length + " 页" + (extras.length ? "（含" + extras.join("/") + "）" : ""));
+    }
+    el.innerHTML = "<span>" + parts.slice(0, 2).join(" · ") + "</span><span>" + parts.slice(2).join("") + "</span>";
+  }
+
+  /* ---------------- 待办列表 ---------------- */
+  function renderList(){
+    var host = $("#list");
+    host.innerHTML = "";
+    var filter = state.filter;
+    var items = state.todos.filter(function(t){
+      if(filter === "open") return !t.done;
+      if(filter === "done") return !!t.done;
+      return true;
+    });
+
+    if(items.length === 0){
+      var d = document.createElement("div");
+      d.className = "empty";
+      d.textContent = filter === "done" ? "还没有已完成的事项" : (filter === "open" ? "没有未完成的事项，清爽" : "还没有待办，先加一条");
+      host.appendChild(d);
+      return;
+    }
+
+    items.forEach(function(t){ host.appendChild(rowFor(t)); });
+  }
+
+  function rowFor(t){
+    var now = new Date();
+    var meta = dueMeta(t.due, now);
+    var row = document.createElement("div");
+    row.className = "row" + (t.done ? " done" : "") + (meta && meta.overdue && !t.done ? " overdue" : "");
+    row.dataset.id = t.id;
+    row.draggable = !t.done;
+
+    var grip = document.createElement("span");
+    grip.className = "grip";
+    grip.textContent = t.done ? "" : "⠿";
+
+    var check = document.createElement("button");
+    check.className = "check";
+    check.type = "button";
+    check.title = t.done ? "标记未完成" : "标记完成";
+    check.appendChild(Object.assign(document.createElement("i"), { className: "tick" }));
+    check.addEventListener("click", function(){
+      t.done = !t.done;
+      saveTodos(); renderList(); renderPreview(); markDirty();
+    });
+
+    var title = document.createElement("input");
+    title.className = "title";
+    title.type = "text";
+    title.value = t.title;
+    title.placeholder = "待办内容";
+    title.addEventListener("input", function(){
+      t.title = title.value;
+      saveTodos(); renderPreview(); markDirty();
+    });
+    title.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); title.blur(); }
+    });
+
+    var due = document.createElement("input");
+    due.className = "due" + (t.due ? "" : " empty");
+    due.type = "date";
+    due.value = t.due || "";
+    due.title = "截止日期";
+    due.addEventListener("change", function(){
+      t.due = due.value;
+      saveTodos(); renderList(); renderPreview(); markDirty();
+    });
+
+    var pin = document.createElement("button");
+    pin.className = "pin" + (state.settings.pinnedId === t.id ? " on" : "");
+    pin.type = "button";
+    pin.textContent = state.settings.pinnedId === t.id ? "●" : "○";
+    pin.title = state.settings.pinnedId === t.id ? "取消今日重点" : "设为今日重点";
+    pin.addEventListener("click", function(){ togglePin(t.id); });
+
+    var del = document.createElement("button");
+    del.className = "del";
+    del.type = "button";
+    del.textContent = "×";
+    del.title = "删除";
+    del.addEventListener("click", function(){
+      var i = state.todos.indexOf(t);
+      if(i > -1) state.todos.splice(i, 1);
+      saveTodos(); renderList(); renderPreview(); markDirty();
+    });
+
+    row.appendChild(grip); row.appendChild(check); row.appendChild(title); row.appendChild(due);
+    row.appendChild(pin); row.appendChild(del);
+
+    row.addEventListener("dragstart", function(e){
+      if(t.done){ e.preventDefault(); return; }
+      dragId = t.id;
+      row.classList.add("dragging");
+      try{ e.dataTransfer.setData("text/plain", t.id); }catch(err){}
+      e.dataTransfer.effectAllowed = "move";
+    });
+    row.addEventListener("dragend", function(){
+      dragId = null;
+      row.classList.remove("dragging");
+      document.querySelectorAll(".row.drop-top").forEach(function(x){ x.classList.remove("drop-top"); });
+    });
+    row.addEventListener("dragover", function(e){
+      if(!dragId || dragId === t.id) return;
+      e.preventDefault();
+      row.classList.add("drop-top");
+    });
+    row.addEventListener("dragleave", function(){ row.classList.remove("drop-top"); });
+    row.addEventListener("drop", function(e){
+      e.preventDefault();
+      row.classList.remove("drop-top");
+      if(!dragId || dragId === t.id) return;
+      var from = state.todos.findIndex(function(x){ return x.id === dragId; });
+      var to = state.todos.findIndex(function(x){ return x.id === t.id; });
+      if(from < 0 || to < 0) return;
+      var moved = state.todos.splice(from, 1)[0];
+      state.todos.splice(to, 0, moved);
+      saveTodos(); renderList(); renderPreview(); markDirty();
+    });
+
+    return row;
+  }
+
+  var dragId = null;
+
+  /* ---------------- 设置 ---------------- */
+  var dlg = $("#settingsDlg");
+
+  function openSettings(){
+    $("#apiKey").value = state.settings.apiKey || "";
+    $("#deviceId").value = state.settings.deviceId || "";
+    $("#pageSize").value = String(state.settings.pageSize || 4);
+    $("#pages").value = String(state.settings.pages || 3);
+    $("#showDone").checked = !!state.settings.showDone;
+    $("#showClock").checked = state.settings.showClock !== false;
+    $("#weatherOn").checked = !!state.settings.weatherOn;
+    $("#weatherCity").value = state.settings.weatherCity || "";
+    $("#weatherEvery").value = String(state.settings.weatherEveryMin || 0);
+    $("#quoteOn").checked = !!state.settings.quoteOn;
+    $("#quoteEvery").value = String(state.settings.quoteEveryMin || 0);
+    renderBindings();
+    $("#probe").hidden = true;
+    dlg.showModal();
+    if(state.settings.apiKey && state.settings.deviceId) readDeviceSettings(true);
+  }
+
+  function fillCardSelect(sel, cur, onPick){
+    if(!sel) return;
+    var opts = ['<option value="">— 未绑定 —</option>'];
+    state.cards.forEach(function(c){
+      var key = c.key || "";
+      if(!key) return;
+      var name = c.alias || c.title || ("画板卡 " + key.slice(0, 8));
+      opts.push('<option value="' + esc(key) + '"' + (cur === key ? " selected" : "") + ">" + esc(name) + "</option>");
+    });
+    if(cur && !state.cards.some(function(c){ return c.key === cur; })){
+      opts.push('<option value="' + esc(cur) + '" selected>已绑定（' + esc(cur.slice(0, 8)) + "…）</option>");
+    }
+    sel.innerHTML = opts.join("");
+    sel.onchange = function(){ onPick(sel.value); };
+  }
+
+  function renderBindings(){
+    var host = $("#bindings");
+    host.innerHTML = "";
+    var pages = +$("#pages").value || state.settings.pages || 3;
+    for(var i = 0; i < pages; i++){
+      var row = document.createElement("div");
+      row.className = "binding";
+
+      var lbl = document.createElement("span");
+      lbl.className = "lbl";
+      lbl.textContent = "第 " + (i + 1) + " 页";
+
+      var sel = document.createElement("select");
+      var opts = ['<option value="">— 未绑定 —</option>'];
+      var cur = state.settings.bindings[i] && state.settings.bindings[i].key;
+      state.cards.forEach(function(c){
+        var key = c.key || "";
+        if(!key) return;
+        var name = c.alias || c.title || ("画板卡 " + key.slice(0, 8));
+        var sel0 = cur === key ? " selected" : "";
+        opts.push('<option value="' + esc(key) + '"' + sel0 + ">" + esc(name) + "</option>");
+      });
+      if(cur && !state.cards.some(function(c){ return c.key === cur; })){
+        opts.push('<option value="' + esc(cur) + '" selected>已绑定（' + esc(cur.slice(0, 8)) + "…）</option>");
+      }
+      sel.innerHTML = opts.join("");
+      sel.addEventListener("change", function(){
+        state.settings.bindings[i] = sel.value ? { key: sel.value } : null;
+      });
+
+      row.appendChild(lbl); row.appendChild(sel);
+      host.appendChild(row);
+    }
+
+    fillCardSelect($("#weatherKey"), state.settings.weatherKey, function(v){
+      state.settings.weatherKey = v;
+      // 选了卡就等于启用，避免"绑了但没勾启用"这种坑
+      if(v){
+        state.settings.weatherOn = true;
+        $("#weatherOn").checked = true;
+        if(!state.settings.weatherCity){ toast("天气页：别忘了填城市再保存"); }
+      }
+      saveSettings();
+      updateTotalHint();
+    });
+    fillCardSelect($("#quoteKey"), state.settings.quoteKey, function(v){
+      state.settings.quoteKey = v;
+      if(v){
+        state.settings.quoteOn = true;
+        $("#quoteOn").checked = true;
+      }
+      saveSettings();
+      updateTotalHint();
+    });
+    updateTotalHint();
+  }
+
+  function updateTotalHint(){
+    var n = +$("#pages").value || 3;
+    var w = $("#weatherOn").checked, q = $("#quoteOn").checked;
+    var bits = ["待办 " + n];
+    if(w) bits.push("天气");
+    if(q) bits.push("金句");
+    var text = "总页数 " + (n + (w ? 1 : 0) + (q ? 1 : 0)) + "（" + bits.join(" + ") + "）";
+    var a = $("#pageTotalHint"); if(a) a.textContent = text;
+    var b = $("#personalHint"); if(b) b.textContent = "当前：" + text;
+  }
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ---------------- API ---------------- */
+  var BASE = "https://dot.mindreset.tech/api/authV2";
+
+  function endpoint(){
+    if(!state.settings.apiKey || !state.settings.deviceId){
+      throw new Error("缺少 API 密钥或设备序列号");
+    }
+    return BASE + "/open/device/" + encodeURIComponent(state.settings.deviceId);
+  }
+
+  async function doFetch(url, opts){
+    opts = opts || {};
+    var res;
+    try{
+      res = await fetch(url, {
+        method: opts.method || "GET",
+        headers: Object.assign({
+          "Authorization": "Bearer " + state.settings.apiKey
+        }, opts.body ? { "Content-Type": "application/json" } : {}),
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+    }catch(e){
+      // 浏览器只给一句 Failed to fetch，翻成人话
+      throw new Error("连不上服务器（网络/代理/VPN 拦截？）");
+    }
+    var raw = await res.text();
+    var body;
+    try{ body = raw ? JSON.parse(raw) : null; }catch(e2){ body = raw; }
+    return { ok: res.ok, status: res.status, body: body };
+  }
+
+  function call(path, opts){ return doFetch(endpoint() + path, opts); }
+  // 账号级接口在 /open 下（/api/authV2/open/devices），少了 /open 会 404 且没有 CORS 头
+  function callRoot(path, opts){ return doFetch(BASE + "/open" + path, opts); }
+
+  function explain(r){
+    var msg = r.body && (r.body.message || r.body.error_description || r.body.error || r.body.msg);
+    if(r.status === 401) return "密钥无效或已过期（401）";
+    if(r.status === 403) return "这个密钥没有该设备的权限（403）";
+    if(r.status === 404) return "循环列表里找不到「画板 API」卡片，或 taskKey 不匹配（404）";
+    if(r.status === 400) return "参数有问题（400）" + (msg ? "：" + msg : "");
+    if(r.status === 500) return "设备响应失败（500），看看是不是没接电/离线";
+    if(r.status === 429) return "请求太快了（429），稍等几秒";
+    return "HTTP " + r.status + (msg ? "：" + msg : "");
+  }
+
+  async function testConnection(){
+    var probe = $("#probe");
+    probe.hidden = false;
+    probe.textContent = "连接中…";
+    try{
+      var r = await call("/status");
+      if(!r.ok){ probe.textContent = "✗ " + explain(r); return false; }
+      var b = r.body || {};
+      var st = b.status || {};
+      state.lastTest = { battery: st.battery, wifi: st.wifi, at: new Date() };
+      probe.textContent = [
+        "✓ 已连接 " + (b.deviceId || state.settings.deviceId),
+        "系统 " + (st.version || "—") + " · " + (st.battery || "电池未知"),
+        "Wi-Fi " + (st.wifi || "—"),
+        "上次刷新 " + ((b.renderInfo && b.renderInfo.last) || "—")
+      ].join("\n");
+      updatePill();
+      return true;
+    }catch(e){
+      probe.textContent = "✗ " + (e && e.message ? e.message : "网络请求失败");
+      return false;
+    }
+  }
+
+  async function discover(){
+    var probe = $("#probe");
+    probe.hidden = false;
+    probe.textContent = "正在读取循环列表…";
+    try{
+      var r = await call("/loop/list");
+      if(!r.ok){ probe.textContent = "✗ " + explain(r); return; }
+      var arr = Array.isArray(r.body) ? r.body : (r.body && r.body.data) || [];
+      var cards = arr.filter(function(x){ return x && x.type === "CANVAS_API"; });
+      state.cards = cards.map(function(c, i){
+        return { key: c.key, alias: c.alias || c.taskAlias || ("画板卡 " + (i + 1)) };
+      });
+      saveCards();
+
+      var pages = +$("#pages").value || state.settings.pages;
+      var lines = ["✓ 循环列表共 " + arr.length + " 项，其中画板卡 " + cards.length + " 个"];
+      if(cards.length === 0){
+        lines.push("");
+        lines.push("看起来还没加「画板 API」内容。");
+        lines.push("Dot App → 内容工坊 → 选中设备 → 循环列表 → 添加「画板 API」。");
+      }else{
+        if(cards.length < pages){
+          lines.push("当前设了 " + pages + " 页，但只有 " + cards.length + " 个画板卡；");
+          lines.push("已自动把页数调成 " + cards.length + "，多出来的卡片可在 App 里再加。");
+          $("#pages").value = String(cards.length);
+          state.settings.pages = cards.length;
+          pages = cards.length;
+        }
+        state.settings.bindings = state.cards.map(function(c){ return { key: c.key }; });
+        lines.push("已按顺序绑定到第 1–" + Math.min(cards.length, pages) + " 页。");
+      }
+      probe.textContent = lines.join("\n");
+      renderBindings();
+    }catch(e){
+      probe.textContent = "✗ " + (e && e.message ? e.message : "网络请求失败");
+    }
+  }
+
+  /* ---------------- 设备设置：轮播间隔 ---------------- */
+  function pickInterval(body){
+    if(!body) return null;
+    var cands = [
+      body.interval,
+      body.settings && body.settings.interval,
+      body.data && body.data.interval
+    ];
+    for(var i = 0; i < cands.length; i++){
+      var iv = cands[i];
+      if(iv && typeof iv.powerMs === "number" && typeof iv.batteryMs === "number") return iv;
+    }
+    return null;
+  }
+
+  async function readDeviceSettings(silent){
+    try{
+      var r = await call("/settings");
+      if(!r.ok){ if(!silent) toast(explain(r)); return; }
+      var b = r.body || {};
+      var iv = pickInterval(b);
+      if(iv){
+        $("#ivPower").value = Math.round(iv.powerMs / 60000);
+        $("#ivBattery").value = Math.round(iv.batteryMs / 60000);
+      }
+      var sl = b.sleep || (b.settings && b.settings.sleep);
+      if(sl){
+        $("#sleepOn").checked = !!sl.enabled;
+        if(sl.start) $("#sleepStart").value = sl.start;
+        if(sl.end) $("#sleepEnd").value = sl.end;
+        state.settings.sleepOn = !!sl.enabled;
+        state.settings.sleepStart = sl.start || state.settings.sleepStart;
+        state.settings.sleepEnd = sl.end || state.settings.sleepEnd;
+        saveSettings();
+      }
+      if(!silent) toast("已读取设备设置");
+    }catch(e){
+      if(!silent) toast(e && e.message ? e.message : "网络请求失败");
+    }
+  }
+
+  async function applyInterval(){
+    var p = parseInt($("#ivPower").value, 10);
+    var b = parseInt($("#ivBattery").value, 10);
+    if(!(p >= 1 && p <= 720) || !(b >= 1 && b <= 720)){
+      toast("分钟数要在 1–720 之间");
+      return;
+    }
+    try{
+      var r = await call("/settings", {
+        method: "POST",
+        body: { interval: { powerMs: p * 60000, batteryMs: b * 60000 } }
+      });
+      if(r.ok){
+        toast("已写入设备：插电 " + p + " 分钟 / 电池 " + b + " 分钟");
+        log("轮播间隔 → 插电 " + p + " 分钟 · 电池 " + b + " 分钟", "ok");
+      }else{
+        toast(explain(r));
+      }
+    }catch(e){
+      toast(e && e.message ? e.message : "网络请求失败");
+    }
+  }
+
+  /* ---------------- 睡眠 / 切页 / 设备列表 / 重点 ---------------- */
+  async function applySleep(){
+    var on = $("#sleepOn").checked;
+    var s = $("#sleepStart").value || "22:00";
+    var e = $("#sleepEnd").value || "07:00";
+    if(on && s === e){ toast("起止时间不能一样"); return; }
+    try{
+      var r = await call("/settings", { method: "POST", body: { sleep: { enabled: on, start: s, end: e } } });
+      if(r.ok){
+        state.settings.sleepOn = on;
+        state.settings.sleepStart = s;
+        state.settings.sleepEnd = e;
+        saveSettings();
+        toast(on ? "睡眠已开：" + s + "–" + e : "睡眠已关");
+        log("睡眠 → " + (on ? s + "–" + e : "关闭"), "ok");
+      }else{
+        toast(explain(r));
+      }
+    }catch(err){ toast(err && err.message ? err.message : "网络请求失败"); }
+  }
+
+  async function nextContent(){
+    try{
+      var r = await call("/next", { method: "POST" });
+      toast(r.ok ? ((r.body && r.body.message) || "已切到下一页") : explain(r));
+      if(r.ok) log("手动切到下一页", "ok");
+    }catch(e){ toast(e && e.message ? e.message : "网络请求失败"); }
+  }
+
+  async function loadDevices(silent){
+    try{
+      var r = await callRoot("/devices");
+      if(!r.ok){
+        if(!silent) toast(explain(r));
+        else log("设备列表读取失败：" + explain(r), "warn");
+        return;
+      }
+      var arr = Array.isArray(r.body) ? r.body : (r.body && r.body.data) || [];
+      var sel = $("#devSelect");
+      sel.innerHTML = "";
+      if(arr.length === 0){
+        sel.innerHTML = '<option value="">— 账号下没有设备 —</option>';
+        return;
+      }
+      arr.forEach(function(d){
+        var o = document.createElement("option");
+        o.value = d.id;
+        o.textContent = (d.alias || d.id) + " · " + d.id;
+        sel.appendChild(o);
+      });
+      if(state.settings.deviceId){
+        sel.value = state.settings.deviceId;
+        if(sel.value !== state.settings.deviceId) sel.selectedIndex = 0;
+      }
+      if(!state.settings.deviceId){
+        state.settings.deviceId = sel.value;
+        saveSettings();
+        updatePill();
+      }
+      if(!silent) toast("找到 " + arr.length + " 台设备");
+      readDeviceSettings(true);
+    }catch(e){
+      if(!silent) toast(e && e.message ? e.message : "网络请求失败");
+      else log("设备列表读取失败：" + (e && e.message ? e.message : "网络错误"), "warn");
+    }
+  }
+
+  function onDeviceChange(){
+    var id = $("#devSelect").value;
+    if(!id || id === state.settings.deviceId) return;
+    state.settings.deviceId = id;
+    state.settings.bindings = [];
+    state.settings.fixedKey = "";
+    state.cards = [];
+    saveSettings();
+    saveCards();
+    updatePill();
+    renderTabs(buildAll());
+    log("切到设备 " + id + "，正在重新发现画板卡", "warn");
+    discover();
+    readDeviceSettings(true);
+  }
+
+  /* ---------------- 今日重点（固定内容） ---------------- */
+  function togglePin(id){
+    state.settings.pinnedId = (state.settings.pinnedId === id) ? null : id;
+    saveSettings();
+    renderList();
+    renderPinLabel();
+  }
+
+  function renderPinLabel(){
+    var el = $("#pinLabel");
+    if(!el) return;
+    var t = state.settings.pinnedId && state.todos.find(function(x){ return x.id === state.settings.pinnedId; });
+    if(t){
+      el.textContent = "置顶：" + t.title;
+      el.classList.add("on");
+    }else{
+      el.textContent = "未设置（点待办右侧的图钉）";
+      el.classList.remove("on");
+    }
+  }
+
+  async function pushPinned(silent){
+    var id = state.settings.pinnedId;
+    var t = id && state.todos.find(function(x){ return x.id === id; });
+    if(!t){ if(!silent) toast("先在待办右侧点图钉选一条"); return false; }
+
+    try{
+      if(!state.settings.fixedKey){
+        var lr = await call("/fixed/list");
+        if(!lr.ok){ if(!silent) toast("固定列表读不到：" + explain(lr)); return false; }
+        var arr = Array.isArray(lr.body) ? lr.body : (lr.body && lr.body.data) || [];
+        var card = arr.filter(function(x){ return x && x.type === "CANVAS_API" && x.key; })[0];
+        if(!card){ if(!silent) toast("固定列表里没有「画板 API」卡片，先去 App 加一个"); return false; }
+        state.settings.fixedKey = card.key;
+        saveSettings();
+      }
+
+      var wd = buildPinWindowData(t, new Date());
+      var body = {
+        taskType: "fixed",
+        taskKey: state.settings.fixedKey,
+        refreshNow: true,
+        taskAlias: "今日重点",
+        data: { title: t.title, done: !!t.done, due: t.due || "" },
+        windowData: wd,
+        layoutFull: LAYOUT_FULL,
+        border: 0
+      };
+      var r = await call("/canvas", { method: "POST", body: body });
+      if(r.ok){
+        if(!silent) toast("已写入固定卡（到了 App 里设的时间窗才显示）");
+        log("今日重点 → " + t.title, "ok");
+        return true;
+      }
+      if(!silent) toast(explain(r));
+      return false;
+    }catch(e){
+      if(!silent) toast(e && e.message ? e.message : "网络请求失败");
+      return false;
+    }
+  }
+
+  function todayYmd(){
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  function checkRollover(){
+    if(!state.settings.autoDay) return;
+    if(!state.settings.apiKey || !state.settings.deviceId) return;
+    if(!state.settings.lastPushDate) return;
+    if(todayYmd() === state.settings.lastPushDate) return;
+    log("跨天了，按新日期重推一次", "ok");
+    pushAll(true);
+  }
+
+  // 定时推送：页面开着时，每 N 分钟把全部页重推一次
+  var _lastPushAt = 0;
+  function maybeHeartbeat(){
+    var s = state.settings;
+    var min = (s.heartbeatMin === undefined) ? 30 : s.heartbeatMin;
+    if(!min) return;
+    if(!s.apiKey || !s.deviceId) return;
+    // 刚推过（比如自动同步）就别再插一次
+    if(_lastPushAt && (Date.now() - _lastPushAt) < 120000) return;
+    var now = Date.now();
+    if(now < (s.heartbeatNextAt || 0)) return;
+    s.heartbeatNextAt = now + min * 60000;
+    saveSettings();
+    log("定时推送（每 " + min + " 分钟）", "ok");
+    pushAll(true);
+  }
+
+  /* ---------------- 附加页：天气 / 金句 ---------------- */
+  // Open-Meteo 的中文地名库不全：「扬州」查不到，「扬州市」才有。按候选依次试
+  function geoCandidates(q){
+    var out = [q];
+    if(!/[市县区旗盟]$/.test(q)) out.push(q + "市");
+    if(/市$/.test(q)) out.push(q.slice(0, -1));
+    return out;
+  }
+
+  async function fetchWeather(force){
+    var s = state.settings;
+    var city = (s.weatherCity || "").trim();
+    if(!city) return null;
+    var now = Date.now();
+    if(!force && s.weather && s.weather.city === city && (now - s.weather.ts) < 30 * 60 * 1000) return s.weather;
+
+    var lat = null, lon = null;
+    if(s.weather && s.weather.city === city && s.weather.lat !== undefined){ lat = s.weather.lat; lon = s.weather.lon; }
+    if(lat === null){
+      var cands = geoCandidates(city);
+      for(var i = 0; i < cands.length; i++){
+        var g = await fetch("https://geocoding-api.open-meteo.com/v1/search?name=" +
+          encodeURIComponent(cands[i]) + "&language=zh&count=1");
+        if(!g.ok) continue;
+        var gj = await g.json();
+        if(gj.results && gj.results.length){
+          lat = gj.results[0].latitude;
+          lon = gj.results[0].longitude;
+          break;
+        }
+      }
+      if(lat === null) return null;
+    }
+
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+      "&current=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min" +
+      "&forecast_days=5&timezone=auto";
+    var r = await fetch(url);
+    if(!r.ok) return null;
+    var j = await r.json();
+    var w = { city: city, lat: lat, lon: lon, ts: now, data: j };
+    s.weather = w;
+    saveSettings();
+    return w;
+  }
+
+  async function pushWeather(silent){
+    var s = state.settings;
+    if(!s.weatherOn){ return false; }
+    if(!s.weatherKey){
+      log("天气页 ✗ 没绑定画板卡，跳过", "warn");
+      if(!silent) toast("天气页还没绑定画板卡");
+      return false;
+    }
+    if(!(s.weatherCity || "").trim()){
+      log("天气页 ✗ 没填城市，跳过", "bad");
+      if(!silent) toast("天气页还没填城市");
+      return false;
+    }
+    for(var bi = 0; bi < s.bindings.length; bi++){
+      if(s.bindings[bi] && s.bindings[bi].key === s.weatherKey){
+        log("注意：天气页和第 " + (bi + 1) + " 页绑的是同一张卡，后推的会盖掉前一个", "warn");
+      }
+    }
+    var w = null;
+    try{ w = await fetchWeather(false); }catch(e){}
+    if(!w){
+      log("天气页 ✗ 数据拉取失败（城市名？网络？）", "bad");
+      if(!silent) toast("天气拉取失败：检查城市名或网络");
+      return false;
+    }
+
+    var cur = (w.data && w.data.current) || {};
+    var body = {
+      taskType: "loop",
+      taskKey: s.weatherKey,
+      refreshNow: true,
+      taskAlias: "天气",
+      data: { city: w.city, temp: cur.temperature_2m, code: cur.weather_code },
+      windowData: buildWeatherWindowData(w, new Date()),
+      layoutFull: LAYOUT_FULL,
+      border: 0
+    };
+    var r = await call("/canvas", { method: "POST", body: body });
+    if(r.ok){
+      log("天气页 ✓ " + w.city + " " + Math.round(cur.temperature_2m) + "°", "ok");
+      if(!silent) toast("天气页已推送");
+      return true;
+    }
+    log("天气页 ✗ " + explain(r), "bad");
+    if(!silent) toast(explain(r));
+    return false;
+  }
+
+  async function pushQuote(silent, advance){
+    var s = state.settings;
+    if(!s.quoteOn) return false;
+    if(!s.quoteKey){
+      log("金句页 ✗ 没绑定画板卡，跳过", "warn");
+      if(!silent) toast("金句页还没绑定画板卡");
+      return false;
+    }
+    if(advance) s.quoteIndex = (s.quoteIndex + 1) % QUOTES.length;
+    var idx = ((s.quoteIndex % QUOTES.length) + QUOTES.length) % QUOTES.length;
+    var q = QUOTES[idx];
+
+    var body = {
+      taskType: "loop",
+      taskKey: s.quoteKey,
+      refreshNow: true,
+      taskAlias: "金句",
+      data: { author: q.author, index: idx },
+      windowData: buildQuoteWindowData(q, new Date()),
+      layoutFull: LAYOUT_FULL,
+      border: 0
+    };
+    var r = await call("/canvas", { method: "POST", body: body });
+    if(r.ok){
+      log("金句页 ✓ " + q.author, "ok");
+      saveSettings();
+      if(!silent) toast("已换一句");
+      return true;
+    }
+    log("金句页 ✗ " + explain(r), "bad");
+    if(!silent) toast(explain(r));
+    return false;
+  }
+
+  function maybeRotateQuote(){
+    var s = state.settings;
+    if(!s.quoteOn || !s.quoteKey || !s.quoteEveryMin) return;
+    if(!s.apiKey || !s.deviceId) return;
+    var now = Date.now();
+    if(now < (s.quoteNextAt || 0)) return;
+    s.quoteNextAt = now + s.quoteEveryMin * 60000;
+    saveSettings();
+    pushQuote(true, true);
+  }
+
+  function maybeRefreshWeather(){
+    var s = state.settings;
+    if(!s.weatherOn || !s.weatherKey || !s.weatherEveryMin) return;
+    if(!s.apiKey || !s.deviceId) return;
+    var now = Date.now();
+    if(now < (s.weatherNextAt || 0)) return;
+    s.weatherNextAt = now + s.weatherEveryMin * 60000;
+    saveSettings();
+    pushWeather(true);
+  }
+
+  /* ---------------- 推送 ---------------- */
+  function log(msg, cls){
+    var el = $("#log");
+    var d = document.createElement("div");
+    if(cls) d.className = cls;
+    d.textContent = hhmm(new Date()) + "  " + msg;
+    el.insertBefore(d, el.firstChild);
+    while(el.childNodes.length > 40) el.removeChild(el.lastChild);
+  }
+
+  // 推一张待办页
+  async function pushTodoPage(p, totalPages, silent){
+    var page = p.page;
+    if(p.index > 0 && !p.key){
+      log("第 " + (p.index + 1) + " 页未绑定画板卡，已跳过", "warn");
+      return false;
+    }
+
+    var wd = buildWindowData(page, new Date(), { index: p.index, pages: totalPages });
+    var data = {
+      page: p.index + 1,
+      pages: totalPages,
+      total: page.total,
+      done: page.doneCount,
+      undone: page.undone,
+      generatedAt: new Date().toISOString(),
+      items: page.items.map(function(t){
+        return { title: t.title, done: !!t.done, due: t.due || "" };
+      })
+    };
+
+    var body = {
+      taskType: "loop",
+      refreshNow: true,
+      taskAlias: "待办看板 P" + (p.index + 1),
+      data: data,
+      windowData: wd,
+      layoutFull: LAYOUT_FULL,
+      border: 0
+    };
+    if(p.key) body.taskKey = p.key;
+
+    try{
+      var r = await call("/canvas", { method: "POST", body: body });
+      if(r.ok){
+        log("第 " + (p.index + 1) + " 页（待办）✓", "ok");
+        return true;
+      }
+      log("第 " + (p.index + 1) + " 页（待办）✗ " + explain(r), "bad");
+      return false;
+    }catch(e){
+      log("第 " + (p.index + 1) + " 页（待办）✗ " + (e && e.message ? e.message : "网络请求失败"), "bad");
+      return false;
+    }
+  }
+
+  // 每次推送前刷一次循环列表，保证页序 = 设备真实卡序（手工发现容易过期）
+  async function refreshCards(){
+    try{
+      var r = await call("/loop/list");
+      if(!r.ok) return false;
+      var arr = Array.isArray(r.body) ? r.body : (r.body && r.body.data) || [];
+      var cards = arr.filter(function(x){ return x && x.type === "CANVAS_API"; });
+      state.cards = cards.map(function(c, i){
+        return { key: c.key, alias: c.alias || c.taskAlias || ("画板卡 " + (i + 1)) };
+      });
+      saveCards();
+      return true;
+    }catch(e){ return false; }
+  }
+
+  async function push(indices, silent){
+    if(!state.settings.apiKey || !state.settings.deviceId){
+      if(!silent){ toast("先填 API 密钥和设备序列号"); openSettings(); }
+      return { ok: 0, fail: 0 };
+    }
+
+    await refreshCards();
+    autoBindUnbound();
+    var rot = rotationPages();
+    var targets = (indices && indices.length) ? indices : rot.list.map(function(_, i){ return i; });
+    var btns = [$("#btnPushAll"), $("#btnPushOne")];
+    btns.forEach(function(b){ b.disabled = true; });
+
+    var okCount = 0, failCount = 0;
+    try{
+      for(var k = 0; k < targets.length; k++){
+        var p = rot.list[targets[k]];
+        if(!p) continue;
+
+        var ok = false;
+        if(p.kind === "todos") ok = await pushTodoPage(p, rot.list.length, silent);
+        else if(p.kind === "weather") ok = await pushWeather(silent);
+        else ok = await pushQuote(silent, false);
+
+        if(ok) okCount++; else failCount++;
+        if(k < targets.length - 1) await new Promise(function(r){ setTimeout(r, 180); });
+      }
+    }finally{
+      btns.forEach(function(b){ b.disabled = false; });
+    }
+
+    _lastPushAt = Date.now();
+
+    if(okCount){
+      state.settings.lastPushDate = todayYmd();
+      saveSettings();
+    }
+
+    if(silent) return { ok: okCount, fail: failCount };
+    if(okCount && !failCount) toast("已同步 " + okCount + " 页到设备");
+    else if(okCount && failCount) toast("成功 " + okCount + " 页，失败 " + failCount + " 页，看下方日志");
+    else if(failCount) toast("推送失败，看下方日志");
+    return { ok: okCount, fail: failCount };
+  }
+
+  async function pushAll(silent){
+    return push(null, silent);
+  }
+
+  async function fetchShot(){
+    try{
+      var r = await call("/status");
+      if(!r.ok){ toast(explain(r)); return; }
+      var info = (r.body && r.body.renderInfo) || {};
+      var imgs = info.current && info.current.image;
+      var url = Array.isArray(imgs) ? imgs[0] : imgs;
+      if(!url){ toast("设备还没回传过画面，先同步一次"); return; }
+      var img = $("#deviceShot");
+      img.onload = function(){ img.hidden = false; $("#board").style.visibility = "hidden"; };
+      img.onerror = function(){ toast("回传图片加载失败"); };
+      img.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "t=" + Date.now();
+      toast("已拉取设备实拍，点预览或再次同步可切回");
+    }catch(e){
+      toast(e && e.message ? e.message : "网络请求失败");
+    }
+  }
+
+  /* ---------------- 其它 UI ---------------- */
+  function updatePill(){
+    var p = $("#connPill");
+    var has = state.settings.apiKey && state.settings.deviceId;
+    if(!has){
+      p.className = "pill";
+      p.textContent = "未配置";
+    }else if(state.lastTest){
+      p.className = "pill ok";
+      p.textContent = "已连接 · " + (state.lastTest.battery || "在线");
+    }else{
+      p.className = "pill warn";
+      p.textContent = "已配置 · 未测试";
+    }
+  }
+
+  var toastTimer = null;
+  function toast(msg){
+    var t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("on"); }, 2600);
+  }
+
+  function addTodo(title){
+    title = (title || "").trim();
+    if(!title) return;
+    state.todos.push({ id: uid(), title: title, done: false, due: "" });
+    saveTodos();
+    renderList(); renderPreview();
+    markDirty();
+  }
+
+  // 待办一变就排队同步：防抖 5 秒，连续编辑只推一次
+  var _syncTimer = null;
+  function markDirty(){
+    if(state.settings.autoSync === false) return;
+    if(!state.settings.apiKey || !state.settings.deviceId) return;
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(function(){
+      log("待办有变动，自动同步一次", "ok");
+      pushAll(true).then(function(r){
+        if(r && r.fail) toast("自动同步：有 " + r.fail + " 页失败，看右下角日志");
+      });
+    }, 5000);
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+  $("#btnAdd").addEventListener("click", function(){
+    var input = $("#newTitle");
+    addTodo(input.value);
+    input.value = "";
+    input.focus();
+  });
+  $("#newTitle").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      e.preventDefault();
+      addTodo(this.value);
+      this.value = "";
+    }
+  });
+
+  $("#filters").addEventListener("click", function(e){
+    var b = e.target.closest(".chip");
+    if(!b) return;
+    state.filter = b.dataset.filter;
+    document.querySelectorAll(".chip").forEach(function(c){ c.classList.toggle("on", c === b); });
+    renderList();
+  });
+
+  $("#btnSettings").addEventListener("click", openSettings);
+  $("#btnCloseDlg").addEventListener("click", function(){ dlg.close(); });
+  $("#btnCancel").addEventListener("click", function(){ dlg.close(); });
+
+  $("#toggleKey").addEventListener("click", function(){
+    var k = $("#apiKey");
+    var show = k.type === "password";
+    k.type = show ? "text" : "password";
+    this.textContent = show ? "隐藏" : "显示";
+  });
+
+  $("#btnTest").addEventListener("click", function(){
+    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    saveSettings();
+    updatePill();
+    testConnection();
+  });
+
+  $("#btnDiscover").addEventListener("click", function(){
+    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    saveSettings();
+    updatePill();
+    discover();
+  });
+
+  $("#btnApplyIv").addEventListener("click", function(){
+    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    applyInterval();
+  });
+
+  $("#btnDevices").addEventListener("click", function(){
+    state.settings.apiKey = $("#apiKey").value.trim();
+    if(!state.settings.apiKey){ toast("先填 API 密钥"); openSettings(); return; }
+    saveSettings();
+    loadDevices();
+  });
+
+  $("#devSelect").addEventListener("change", onDeviceChange);
+
+  $("#btnApplySleep").addEventListener("click", function(){
+    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    applySleep();
+  });
+
+  $("#btnNext").addEventListener("click", function(){
+    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    nextContent();
+  });
+
+  $("#btnTestWeather").addEventListener("click", async function(){
+    state.settings.weatherCity = $("#weatherCity").value.trim();
+    if(!state.settings.weatherCity){ toast("先填城市"); return; }
+    var probe = $("#probe");
+    probe.hidden = false;
+    probe.textContent = "查天气…";
+    try{
+      var w = await fetchWeather(true);
+      if(!w){ probe.textContent = "✗ 没查到「" + state.settings.weatherCity + "」\n中文地名库不全，试试拼音（如 yangzhou）或加个「市」"; return; }
+      var cur = (w.data && w.data.current) || {};
+      var d = (w.data && w.data.daily) || {};
+      var lines = [
+        "✓ " + w.city + "  (" + w.lat.toFixed(2) + ", " + w.lon.toFixed(2) + ")",
+        "现在 " + Math.round(cur.temperature_2m) + "° " + wmo(cur.weather_code)
+      ];
+      var ts = d.time || [], cs = d.weather_code || [], hs = d.temperature_2m_max || [], ls = d.temperature_2m_min || [];
+      for(var i = 0; i < Math.min(4, ts.length); i++){
+        lines.push("  " + ts[i] + "  " + wmo(cs[i]) + "  " + Math.round(ls[i]) + "°~" + Math.round(hs[i]) + "°");
+      }
+      probe.textContent = lines.join("\n");
+    }catch(e){
+      probe.textContent = "✗ " + (e && e.message ? e.message : "请求失败");
+    }
+  });
+
+  $("#btnNextQuote").addEventListener("click", function(){    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    state.settings.quoteOn = $("#quoteOn").checked;
+    if(!state.settings.quoteKey){ toast("先在设置里给金句页绑定画板卡"); return; }
+    pushQuote(false, true);
+  });
+
+  $("#btnClearPin").addEventListener("click", function(){
+    if(!state.settings.pinnedId){ toast("还没有置顶的条目"); return; }
+    state.settings.pinnedId = null;
+    saveSettings();
+    renderList(); renderPreview(); renderPinLabel();
+    toast("已取消置顶");
+  });
+
+  $("#btnPinFixed").addEventListener("click", function(){
+    if(!confirm("固定卡会在它的时间窗内压住轮播，窗口结束才回到循环。\n\n确定要推到固定卡吗？")) return;
+    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    pushPinned(false);
+  });
+
+  $("#autoDay").addEventListener("change", function(){
+    state.settings.autoDay = this.checked;
+    saveSettings();
+    toast(this.checked ? "跨天自动刷新已开" : "跨天自动刷新已关");
+  });
+
+  $("#autoSync").addEventListener("change", function(){
+    state.settings.autoSync = this.checked;
+    saveSettings();
+    toast(this.checked ? "自动同步已开：改完 5 秒推一次" : "自动同步已关，只能手动同步");
+  });
+
+  $("#heartbeat").addEventListener("change", function(){
+    state.settings.heartbeatMin = +this.value || 0;
+    state.settings.heartbeatNextAt = state.settings.heartbeatMin
+      ? Date.now() + state.settings.heartbeatMin * 60000 : 0;
+    saveSettings();
+    toast(state.settings.heartbeatMin
+      ? ("定时推送：每 " + state.settings.heartbeatMin + " 分钟")
+      : "定时推送已关");
+  });
+
+  $("#pages").addEventListener("change", function(){
+    state.settings.pages = +this.value;
+    renderBindings();
+  });
+
+  $("#weatherOn").addEventListener("change", function(){
+    state.settings.weatherOn = this.checked;
+    saveSettings(); updateTotalHint(); renderPreview();
+  });
+  $("#quoteOn").addEventListener("change", function(){
+    state.settings.quoteOn = this.checked;
+    saveSettings(); updateTotalHint(); renderPreview();
+  });
+  $("#weatherCity").addEventListener("change", function(){
+    state.settings.weatherCity = this.value.trim();
+    state.settings.weather = null;   // 城市变了，缓存作废
+    saveSettings();
+  });
+  $("#weatherEvery").addEventListener("change", function(){
+    state.settings.weatherEveryMin = +this.value || 0;
+    state.settings.weatherNextAt = state.settings.weatherEveryMin
+      ? Date.now() + state.settings.weatherEveryMin * 60000 : 0;
+    saveSettings();
+  });
+  $("#quoteEvery").addEventListener("change", function(){
+    state.settings.quoteEveryMin = +this.value || 0;
+    state.settings.quoteNextAt = state.settings.quoteEveryMin
+      ? Date.now() + state.settings.quoteEveryMin * 60000 : 0;
+    saveSettings();
+  });
+
+  $("#btnSave").addEventListener("click", function(){
+    state.settings.apiKey = $("#apiKey").value.trim();
+    state.settings.deviceId = $("#deviceId").value.trim();
+    state.settings.pageSize = +$("#pageSize").value;
+    state.settings.pages = +$("#pages").value;
+    state.settings.showDone = $("#showDone").checked;
+    state.settings.showClock = $("#showClock").checked;
+
+    var prevCity = state.settings.weatherCity;
+    var prevEvery = state.settings.quoteEveryMin;
+    var prevWEvery = state.settings.weatherEveryMin;
+    state.settings.weatherOn = $("#weatherOn").checked;
+    state.settings.weatherCity = $("#weatherCity").value.trim();
+    state.settings.weatherEveryMin = +$("#weatherEvery").value || 0;
+    state.settings.quoteOn = $("#quoteOn").checked;
+    state.settings.quoteEveryMin = +$("#quoteEvery").value || 0;
+    if(state.settings.weatherCity !== prevCity) state.settings.weather = null;
+    if(state.settings.quoteEveryMin !== prevEvery || !state.settings.quoteNextAt){
+      state.settings.quoteNextAt = state.settings.quoteEveryMin
+        ? Date.now() + state.settings.quoteEveryMin * 60000
+        : 0;
+    }
+    if(state.settings.weatherEveryMin !== prevWEvery || !state.settings.weatherNextAt){
+      state.settings.weatherNextAt = state.settings.weatherEveryMin
+        ? Date.now() + state.settings.weatherEveryMin * 60000
+        : 0;
+    }
+
+    // 先落盘，再谈校验 —— 附加页没配完绝不能把密钥一起卡掉
+    var saved = saveSettings();
+
+    var warn = [];
+    if(state.settings.weatherOn && (!state.settings.weatherCity || !state.settings.weatherKey)) warn.push("天气页缺城市或画板卡");
+    if(state.settings.quoteOn && !state.settings.quoteKey) warn.push("金句页缺画板卡");
+
+    dlg.close();
+    updatePill();
+    state.currentPage = Math.min(state.currentPage, state.settings.pages - 1);
+    renderPreview();
+    renderBindings();
+    updateTotalHint();
+    if(!saved) toast("浏览器存储不可用，设置只在本次会话有效");
+    else if(warn.length) toast("已保存；但" + warn.join("、") + "，这两页推送会失败");
+    else toast("已保存");
+  });
+
+  $("#btnPushAll").addEventListener("click", function(){
+    pushAll(false);
+  });
+
+  $("#btnPushOne").addEventListener("click", function(){ push([state.currentPage]); });
+
+  $("#btnShot").addEventListener("click", fetchShot);
+
+  $("#screen").addEventListener("click", function(){
+    var img = $("#deviceShot");
+    if(!img.hidden){
+      img.hidden = true;
+      $("#board").style.visibility = "";
+    }
+  });
+
+  $("#btnExport").addEventListener("click", function(){
+    // 设置里除了天气缓存，全部带走；密钥也在里面，导出文件请自己保管
+    var s = {};
+    Object.keys(state.settings).forEach(function(k){
+      if(k === "weather") return;
+      s[k] = state.settings[k];
+    });
+    var payload = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      todos: state.todos,
+      settings: s
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "quote0-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
+    toast("已导出（含 API 密钥，注意保管）");
+  });
+
+  $("#btnImport").addEventListener("click", function(){ $("#fileInput").click(); });
+  $("#fileInput").addEventListener("change", function(){
+    var f = this.files && this.files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var obj = JSON.parse(String(reader.result));
+        var list = Array.isArray(obj) ? obj : obj.todos;
+        if(!Array.isArray(list)) throw new Error("格式不对");
+        state.todos = list.map(function(t){
+          return { id: uid(), title: String(t.title || ""), done: !!t.done, due: t.due || "" };
+        }).filter(function(t){ return t.title; });
+        if(obj && obj.settings && typeof obj.settings === "object"){
+          Object.keys(obj.settings).forEach(function(k){
+            if(k === "weather") return;      // 天气缓存不带，导入后重新拉
+            state.settings[k] = obj.settings[k];
+          });
+        }
+        saveTodos(); saveSettings();
+        syncSettingsUi(); updatePill();
+        renderList(); renderPreview(); markDirty();
+        toast("已导入 " + state.todos.length + " 条（含设置）");
+      }catch(e){
+        toast("导入失败：" + (e.message || "文件读不了"));
+      }
+    };
+    reader.readAsText(f, "utf-8");
+    this.value = "";
+  });
+
+  $("#btnClear").addEventListener("click", function(){
+    if(!confirm("清空全部待办？这个操作不能撤销。")) return;
+    state.todos = [];
+    saveTodos(); renderList(); renderPreview(); markDirty();
+    toast("已清空");
+  });
+
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape" && dlg.open) return;
+    if(e.target && (e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) return;
+    if(e.key === "ArrowLeft" && state.currentPage > 0){ state.currentPage--; renderPreview(); }
+    if(e.key === "ArrowRight" && state.currentPage < state.settings.pages - 1){ state.currentPage++; renderPreview(); }
+  });
+
+  // 把 state.settings 回填到所有控件（初始化 / 导入备份后都用它）
+  function syncSettingsUi(){
+    $("#apiKey").value = state.settings.apiKey || "";
+    $("#deviceId").value = state.settings.deviceId || "";
+    $("#pageSize").value = String(state.settings.pageSize || 4);
+    $("#pages").value = String(state.settings.pages || 3);
+    $("#showDone").checked = !!state.settings.showDone;
+    $("#showClock").checked = state.settings.showClock === true;
+    $("#weatherOn").checked = !!state.settings.weatherOn;
+    $("#weatherCity").value = state.settings.weatherCity || "";
+    $("#weatherEvery").value = String(state.settings.weatherEveryMin || 0);
+    $("#quoteOn").checked = !!state.settings.quoteOn;
+    $("#quoteEvery").value = String(state.settings.quoteEveryMin || 0);
+    $("#sleepOn").checked = !!state.settings.sleepOn;
+    $("#sleepStart").value = state.settings.sleepStart || "22:00";
+    $("#sleepEnd").value = state.settings.sleepEnd || "07:00";
+    $("#autoDay").checked = state.settings.autoDay !== false;
+    $("#autoSync").checked = state.settings.autoSync !== false;
+    if(state.settings.heartbeatMin === undefined) state.settings.heartbeatMin = 30;
+    $("#heartbeat").value = String(state.settings.heartbeatMin || 0);
+    renderBindings();
+    updateTotalHint();
+    renderPinLabel();
+  }
+
+  /* ---------------- 启动 ---------------- */
+  load();
+  renderList();
+  renderPreview();
+  updatePill();
+  renderPinLabel();
+
+  if(state.settings.heartbeatMin === undefined) state.settings.heartbeatMin = 30;
+  if(state.settings.heartbeatMin && !state.settings.heartbeatNextAt){
+    state.settings.heartbeatNextAt = Date.now() + state.settings.heartbeatMin * 60000;
+    saveSettings();
+  }
+  syncSettingsUi();
+  renderPreview();
+
+  if(state.settings.deviceId){
+    var opt = document.createElement("option");
+    opt.value = state.settings.deviceId;
+    opt.textContent = state.settings.deviceId;
+    $("#devSelect").appendChild(opt);
+    $("#devSelect").value = state.settings.deviceId;
+  }
+  // 启动时的自动请求一律静默：失败只写日志，不弹 toast
+  if(state.settings.apiKey && state.settings.deviceId) readDeviceSettings(true);
+  if(state.settings.apiKey) loadDevices(true);
+
+  // 跨天检查：每分钟看一次，日期变了就重推
+  setInterval(checkRollover, 60 * 1000);
+  // 金句轮换
+  setInterval(maybeRotateQuote, 60 * 1000);
+  // 天气自动刷新（和金句同一套逻辑）
+  setInterval(maybeRefreshWeather, 60 * 1000);
+  // 定时推送（默认 30 分钟）
+  setInterval(maybeHeartbeat, 60 * 1000);
+
+  log("工具就绪 · 待办和密钥都在本机，刷新页面不丢");
+})();
+</script>
+</body>
+</html>
